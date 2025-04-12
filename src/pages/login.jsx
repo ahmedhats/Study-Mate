@@ -21,9 +21,7 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Here you would normally handle form submission, validate data, etc.
     console.log("Login form submitted:", formData);
-    // For now, just navigate to the dashboard
     navigate("/dashboard");
   };
 
@@ -37,7 +35,6 @@ const Login = () => {
 
   const handleSocialSignin = (provider) => {
     console.log(`Sign in with ${provider}`);
-    // Implement social sign-in logic here
   };
 
   return (
