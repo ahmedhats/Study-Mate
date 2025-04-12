@@ -1,4 +1,5 @@
-﻿import React from "react";
+﻿// src/routes/AppRoutes.jsx
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,7 +9,8 @@ import {
 import Welcome from "../pages/Welcome";
 import Login from "../pages/login";
 import Signup from "../pages/signup";
-import Dashboard from "../pages/Dashboard"; // You'll need to create this component
+import ProfileSetup from "../pages/profilesetup";
+import Dashboard from "../pages/Dashboard";
 
 const AppRoutes = () => {
   return (
@@ -17,6 +19,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Welcome />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/profile-setup" element={<ProfileSetup />} />
         <Route path="/dashboard" element={<Dashboard />} />
         {/* Add more routes as needed */}
         <Route path="*" element={<Navigate to="/" replace />} />

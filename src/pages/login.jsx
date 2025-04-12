@@ -21,8 +21,19 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Here you would normally handle form submission, validate data, etc.
     console.log("Login form submitted:", formData);
-    navigate("/dashboard");
+
+    // Check if the user has completed their profile
+    const userProfile = localStorage.getItem("userProfile");
+
+    if (userProfile) {
+      // If profile exists, go directly to dashboard
+      navigate("/dashboard");
+    } else {
+      // If no profile exists, go to profile setup
+      navigate("/profile-setup");
+    }
   };
 
   const navigateToSignup = () => {
@@ -35,6 +46,16 @@ const Login = () => {
 
   const handleSocialSignin = (provider) => {
     console.log(`Sign in with ${provider}`);
+    // In a real app, implement OAuth logic here
+
+    // For demonstration, we'll just check for profile and redirect
+    const userProfile = localStorage.getItem("userProfile");
+
+    if (userProfile) {
+      navigate("/dashboard");
+    } else {
+      navigate("/profile-setup");
+    }
   };
 
   return (
