@@ -21,9 +21,27 @@ const Signup = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Check if passwords match
+    if (formData.password !== formData.retypePassword) {
+      alert("Passwords don't match!");
+      return;
+    }
+
+    // Here you would normally handle form submission, validate data, etc.
     console.log("Signup form submitted:", formData);
 
-    navigate("/dashboard");
+    // Store basic user data in localStorage (placeholder for a real backend)
+    localStorage.setItem(
+      "userData",
+      JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+      })
+    );
+
+    // Navigate to profile setup after successful signup
+    navigate("/profile-setup");
   };
 
   const navigateToLogin = () => {
@@ -32,6 +50,10 @@ const Signup = () => {
 
   const handleSocialSignin = (provider) => {
     console.log(`Sign in with ${provider}`);
+    // In a real app, implement OAuth logic here
+
+    // For demonstration, directly navigate to profile setup
+    navigate("/profile-setup");
   };
 
   return (
@@ -106,7 +128,7 @@ const Signup = () => {
 
         <div className="auth-options">
           <p>
-            Already signed up?{" "}
+            Already have an account?{" "}
             <span className="auth-link" onClick={navigateToLogin}>
               Sign In
             </span>
