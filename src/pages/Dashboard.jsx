@@ -1,142 +1,145 @@
 ﻿import React, { useEffect, useState } from "react";
+import { Layout, Card, Button, Row, Col, message } from "antd";
+import {
+  ClockCircleOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import "../styles/Dashboard.css";
+import { getUserData } from "../services/userService";
+import StudyStats from "../components/features/dashboard/StudyStats";
+import RecentActivity from "../components/features/dashboard/RecentActivity";
+import ProfileModal from "../components/features/dashboard/ProfileModal";
+import "./Dashboard.css";
+
+const { Content } = Layout;
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
-  const [profileData, setProfileData] = useState(null);
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
 
   useEffect(() => {
-    // Retrieve user data from localStorage
-    const storedUserData = localStorage.getItem("userData");
-    const storedProfileData = localStorage.getItem("userProfile");
-
-    if (storedUserData) {
-      setUserData(JSON.parse(storedUserData));
-    }
-
-    if (storedProfileData) {
-      setProfileData(JSON.parse(storedProfileData));
-    }
+    fetchUserData();
   }, []);
 
-  const handleLogout = () => {
-    // In a real app, you would clear authentication tokens here
-    navigate("/");
+  const fetchUserData = async () => {
+    try {
+      const data = await getUserData();
+      setUserData(data);
+    } catch (error) {
+      message.error("Failed to fetch user data");
+    }
   };
 
-  const handleEditProfile = () => {
-    navigate("/profile-setup");
+  const handleProfileUpdate = (updatedData) => {
+    setUserData({ ...userData, ...updatedData });
+    setIsProfileModalVisible(false);
   };
 
-  // Helper function to format education level for display
-  const formatEducation = (edu) => {
-    if (!edu) return "Not specified";
+  if (!userData) {
+    return null;
+  }
 
-    const formats = {
-      high_school: "High School",
-      undergraduate: "Undergraduate",
-      graduate: "Graduate",
-      phd: "PhD",
-      other: "Other",
-    };
-
-    return formats[edu] || edu;
-  };
-
-  // Helper function to format study preference for display
-  const formatStudyPreference = (pref) => {
-    if (!pref) return "Not specified";
-
-    const formats = {
-      individual: "Individual Study",
-      group: "Group Study",
-      both: "Both Individual and Group Study",
-    };
-
-    return formats[pref] || pref;
-  };
+  const actionCards = [
+    {
+      title: "Focus Time",
+      icon: (
+        <ClockCircleOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
+      ),
+      description: "2h 30m / 4h Goal",
+      buttonText: "Start Timer",
+      onClick: () => navigate("/timer"),
+    },
+    {
+      title: "Study Streak",
+      icon: <TrophyOutlined style={{ fontSize: "24px", color: "#52c41a" }} />,
+      description: "7 Days",
+      buttonText: "View Stats",
+      onClick: () => navigate("/stats"),
+    },
+    {
+      title: "Study Partners",
+      icon: <TeamOutlined style={{ fontSize: "24px", color: "#722ed1" }} />,
+      description: "3 New Matches",
+      buttonText: "Join Session",
+      onClick: () => navigate("/study-group"),
+    },
+  ];
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-content">
-        <h1>Welcome to Your Dashboard</h1>
+    <Layout className="dashboard-layout">
+      <Content className="dashboard-content">
+        <div className="dashboard-container">
+          <h1>Welcome back, {userData.name.split(" ")[0]}!</h1>
 
-        {userData && (
-          <div className="user-welcome">
-            Hello, {userData.firstName} {userData.lastName}!
-          </div>
-        )}
+          <Row gutter={[24, 24]} className="action-cards">
+            {actionCards.map((card, index) => (
+              <Col xs={24} sm={8} key={index}>
+                <Card className="action-card">
+                  <div className="action-icon">{card.icon}</div>
+                  <h3>{card.title}</h3>
+                  <p>{card.description}</p>
+                  <Button type="primary" onClick={card.onClick}>
+                    {card.buttonText}
+                  </Button>
+                </Card>
+              </Col>
+            ))}
+          </Row>
 
-        <div className="profile-section">
-          <div className="profile-header">
-            <h2>Your Profile</h2>
-            <button className="edit-profile-btn" onClick={handleEditProfile}>
-              Edit Profile
-            </button>
-          </div>
-
-          {profileData ? (
-            <div className="profile-details">
-              <div className="profile-item">
-                <span className="profile-label">Education Level:</span>
-                <span className="profile-value">
-                  {formatEducation(profileData.education)}
-                </span>
-              </div>
-
-              <div className="profile-item">
-                <span className="profile-label">Field of Study/Major:</span>
-                <span className="profile-value">
-                  {profileData.major || "Not specified"}
-                </span>
-              </div>
-
-              <div className="profile-item">
-                <span className="profile-label">Academic Interests:</span>
-                <p className="profile-text">
-                  {profileData.interests || "Not specified"}
-                </p>
-              </div>
-
-              <div className="profile-item">
-                <span className="profile-label">Hobbies:</span>
-                <p className="profile-text">
-                  {profileData.hobbies || "Not specified"}
-                </p>
-              </div>
-
-              <div className="profile-item">
-                <span className="profile-label">Study Preference:</span>
-                <span className="profile-value">
-                  {formatStudyPreference(profileData.studyPreference)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="profile-incomplete">
-              <p>
-                Your profile is incomplete. Please complete your profile to get
-                a personalized experience.
-              </p>
+          <div className="profile-section">
+            <div className="profile-header">
+              <h2>Your Profile</h2>
               <button
-                className="complete-profile-btn"
-                onClick={handleEditProfile}
+                className="edit-profile-btn"
+                onClick={() => setIsProfileModalVisible(true)}
               >
-                Complete Profile
+                Edit Profile
               </button>
             </div>
-          )}
+            <div className="profile-details">
+              <div className="detail-item">
+                <span className="label">Education Level:</span>
+                <span className="value">{userData.education}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Field of Study:</span>
+                <span className="value">{userData.major}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Interests:</span>
+                <span className="value">{userData.interests}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Hobbies:</span>
+                <span className="value">{userData.hobbies}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Study Preference:</span>
+                <span className="value">{userData.studyPreference}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-grid">
+            <div className="dashboard-main">
+              <StudyStats userData={userData} />
+            </div>
+            <div className="dashboard-side">
+              <RecentActivity userData={userData} />
+            </div>
+          </div>
         </div>
 
-        <div className="dashboard-actions">
-          <button className="action-btn">Start Studying</button>
-          <button className="action-btn">Join Study Group</button>
-          <button className="action-btn">Set Study Goals</button>
-        </div>
-      </div>
-    </div>
+        <ProfileModal
+          visible={isProfileModalVisible}
+          onCancel={() => setIsProfileModalVisible(false)}
+          onFinish={handleProfileUpdate}
+          initialValues={userData}
+        />
+      </Content>
+    </Layout>
   );
 };
 
