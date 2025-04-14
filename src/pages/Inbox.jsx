@@ -1,24 +1,13 @@
 import React, { useState } from "react";
-import { Layout, List, Input, Avatar, Typography, Badge, Popover } from "antd";
-import {
-  SendOutlined,
-  SmileOutlined,
-  MessageOutlined,
-} from "@ant-design/icons";
-import EmojiPicker from "emoji-picker-react";
-import {
-  MessageContainer,
-  ChatContainer,
-  MessagesArea,
-  InputContainer,
-  ConversationItem,
-  ChatHeader,
-  NoChat,
-} from "../styles/InboxStyles";
+import { Layout } from "antd";
+import { ChatContainer } from "../styles/InboxStyles";
+import ConversationList from "../components/features/inbox/ConversationList";
+import ChatHeader from "../components/features/inbox/ChatHeader";
+import MessagesArea from "../components/features/inbox/MessagesArea";
+import InputBox from "../components/features/inbox/InputBox";
+import NoChat from "../components/features/inbox/NoChat";
 
 const { Content, Sider } = Layout;
-const { Search } = Input;
-const { Text } = Typography;
 
 const Inbox = () => {
   const [activeChat, setActiveChat] = useState(null);
@@ -121,11 +110,11 @@ const Inbox = () => {
     setNewMessage((prev) => prev + emojiObject.emoji);
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+  const handleSelectChat = (chat) => {
+    setActiveChat(chat);
+    setConversations((prev) =>
+      prev.map((conv) => (conv.id === chat.id ? { ...conv, unread: 0 } : conv))
+    );
   };
 
   return (
@@ -135,121 +124,28 @@ const Inbox = () => {
         theme="light"
         style={{ borderRight: "1px solid #f0f0f0" }}
       >
-        <div style={{ padding: "20px 16px" }}>
-          <Search placeholder="Search messages" />
-        </div>
-        <List
-          dataSource={conversations}
-          renderItem={(item) => (
-            <ConversationItem
-              active={activeChat?.id === item.id}
-              onClick={() => {
-                setActiveChat(item);
-                // Clear unread count when opening chat
-                setConversations((prev) =>
-                  prev.map((conv) =>
-                    conv.id === item.id ? { ...conv, unread: 0 } : conv
-                  )
-                );
-              }}
-            >
-              <Badge count={item.unread}>
-                <Avatar src={item.avatar} size={40} />
-              </Badge>
-              <div style={{ marginLeft: 12, flex: 1 }}>
-                <Text strong>{item.name}</Text>
-                <div>
-                  <Text type="secondary" style={{ fontSize: "14px" }}>
-                    {item.lastMessage}
-                  </Text>
-                </div>
-              </div>
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                {item.time}
-              </Text>
-            </ConversationItem>
-          )}
+        <ConversationList
+          conversations={conversations}
+          activeChat={activeChat}
+          onSelectChat={handleSelectChat}
         />
       </Sider>
       <Content style={{ background: "#fff" }}>
         {activeChat ? (
           <>
-            <ChatHeader>
-              <Avatar src={activeChat.avatar} size={40} />
-              <div>
-                <Text strong style={{ fontSize: "16px", display: "block" }}>
-                  {activeChat.name}
-                </Text>
-                <Text type="secondary">Online</Text>
-              </div>
-            </ChatHeader>
+            <ChatHeader activeChat={activeChat} />
             <ChatContainer>
-              <MessagesArea>
-                {activeChat.messages.map((message) => (
-                  <MessageContainer
-                    key={message.id}
-                    isSender={message.isSender}
-                  >
-                    <div style={{ marginBottom: 4 }}>
-                      <Text
-                        strong
-                        style={{
-                          color: message.isSender ? "white" : "inherit",
-                        }}
-                      >
-                        {message.sender}
-                      </Text>
-                    </div>
-                    {message.content}
-                    <div style={{ marginTop: 4 }}>
-                      <Text
-                        style={{
-                          fontSize: "12px",
-                          color: message.isSender
-                            ? "rgba(255,255,255,0.8)"
-                            : "rgba(0,0,0,0.45)",
-                        }}
-                      >
-                        {message.time}
-                      </Text>
-                    </div>
-                  </MessageContainer>
-                ))}
-              </MessagesArea>
-              <InputContainer>
-                <Input
-                  size="large"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type a message..."
-                  style={{ flex: 1 }}
-                  suffix={
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <Popover
-                        content={<EmojiPicker onEmojiClick={onEmojiClick} />}
-                        trigger="click"
-                        placement="topRight"
-                      >
-                        <SmileOutlined
-                          style={{ color: "#1890ff", cursor: "pointer" }}
-                        />
-                      </Popover>
-                      <SendOutlined
-                        onClick={handleSendMessage}
-                        style={{ color: "#1890ff", cursor: "pointer" }}
-                      />
-                    </div>
-                  }
-                />
-              </InputContainer>
+              <MessagesArea messages={activeChat.messages} />
+              <InputBox
+                value={newMessage}
+                onChange={setNewMessage}
+                onSend={handleSendMessage}
+                onEmojiClick={onEmojiClick}
+              />
             </ChatContainer>
           </>
         ) : (
-          <NoChat>
-            <MessageOutlined style={{ fontSize: "32px", opacity: 0.5 }} />
-            <Text>Select a conversation to start messaging</Text>
-          </NoChat>
+          <NoChat />
         )}
       </Content>
     </Layout>

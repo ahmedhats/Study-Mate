@@ -1,0 +1,53 @@
+.timer-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.timer-card {
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timer-mode {
+    margin: 20px 0;
+}
+
+.timer-settings {
+    margin: 20px 0;
+}
+
+.timer-settings .ant-space {
+    justify-content: center;
+}
+
+.timer-settings .ant-input-number {
+    width: 100px;
+    margin-top: 8px;
+}
+
+.timer-display {
+    margin: 40px 0;
+}
+
+.timer-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.timer-text .ant-typography {
+    font-size: 24px;
+    margin: 0;
+}
+
+.timer-text .ant-typography-secondary {
+    font-size: 14px;
+}
+
+.timer-controls {
+    margin: 20px 0;
+    justify-content: center;
+}

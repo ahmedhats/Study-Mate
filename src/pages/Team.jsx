@@ -1,8 +1,7 @@
 import React from "react";
-import { Typography, Card, Avatar, List, Tag, Space } from "antd";
-import { UserOutlined } from "@ant-design/icons";
-
-const { Title } = Typography;
+import { Card } from "antd";
+import TeamHeader from "../components/features/team/TeamHeader";
+import TeamMemberList from "../components/features/team/TeamMemberList";
 
 const TeamPage = () => {
   const [teamMembers] = React.useState([
@@ -31,35 +30,10 @@ const TeamPage = () => {
 
   return (
     <div style={{ padding: "24px" }}>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <Title level={2}>Team Members</Title>
-        <Card>
-          <List
-            itemLayout="horizontal"
-            dataSource={teamMembers}
-            renderItem={(member) => (
-              <List.Item
-                actions={[
-                  <Tag color={member.status === "online" ? "green" : "default"}>
-                    {member.status.toUpperCase()}
-                  </Tag>,
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={<Avatar icon={<UserOutlined />} />}
-                  title={member.name}
-                  description={
-                    <Space direction="vertical">
-                      <span>{member.role}</span>
-                      <a href={`mailto:${member.email}`}>{member.email}</a>
-                    </Space>
-                  }
-                />
-              </List.Item>
-            )}
-          />
-        </Card>
-      </Space>
+      <TeamHeader />
+      <Card>
+        <TeamMemberList teamMembers={teamMembers} />
+      </Card>
     </div>
   );
 };

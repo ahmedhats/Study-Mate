@@ -3,11 +3,15 @@ import React from "react";
 import { Layout, Menu, Avatar, Typography, Space, Button } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  HomeOutlined,
-  SearchOutlined,
-  InboxOutlined,
-  CheckSquareOutlined,
+  DashboardOutlined,
   TeamOutlined,
+  InboxOutlined,
+  SearchOutlined,
+  CheckSquareOutlined,
+  ClockCircleOutlined,
+  TrophyOutlined,
+  UsergroupAddOutlined,
+  HomeOutlined,
   AppstoreOutlined,
   PlusOutlined,
   LogoutOutlined,
