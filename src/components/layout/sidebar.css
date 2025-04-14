@@ -1,0 +1,228 @@
+/* src/components/layout/Sidebar.css */
+
+/* --- Base Sidebar Container --- */
+.app-sidebar {
+  /* Layout & Positioning */
+  height: 100vh; /* Full viewport height */
+  position: fixed !important; /* Fix position */
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100; /* Ensure it's above page content */
+
+  /* Appearance */
+  background-color: #ffffff !important; /* Override default AntD theme if necessary */
+  border-right: 1px solid #eaeaef; /* Softer border color */
+  box-shadow: 1px 0 6px rgba(0, 0, 0, 0.04); /* Subtle shadow */
+
+  /* Flex layout to position trigger at the bottom */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Wrapper to manage flex layout */
+.sidebar-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Take full height of Sider */
+  overflow: hidden; /* Prevent parent from scrolling */
+}
+
+/* Scrollable area for header, menu, etc. */
+.sidebar-scrollable-content {
+  flex-grow: 1; /* Allows this section to grow and push trigger down */
+  overflow-y: auto; /* Enable vertical scrollbar ONLY when needed */
+  overflow-x: hidden; /* Hide horizontal scrollbar */
+}
+
+/* --- Sidebar Header --- */
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0; /* Prevent header from shrinking */
+  transition: padding 0.2s; /* Smooth padding change on collapse */
+}
+.sidebar-header-space {
+  display: flex; /* Ensure Space component works well */
+  align-items: center;
+  width: 100%;
+}
+.sidebar-avatar {
+  background-color: #1f2937; /* Example background */
+  color: #fff;
+  flex-shrink: 0;
+}
+.user-info {
+  margin-left: 12px;
+  line-height: 1.3;
+  overflow: hidden; /* Prevent text overflow */
+  white-space: nowrap; /* Keep text on one line */
+  opacity: 1;
+  transition: opacity 0.1s ease-in-out, width 0.1s ease-in-out, margin-left 0.2s; /* Smooth hide */
+  width: auto; /* Allow it to take space */
+}
+.user-name {
+  display: block; /* Ensure block display */
+  font-weight: 600;
+  color: #111827;
+}
+.user-email {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Header Styles when Collapsed */
+.ant-layout-sider-collapsed .sidebar-header {
+  padding: 16px 0; /* Adjust padding to center */
+}
+.ant-layout-sider-collapsed .sidebar-header-space {
+  justify-content: center; /* Center avatar */
+}
+.ant-layout-sider-collapsed .user-info {
+  opacity: 0;
+  width: 0;
+  margin-left: 0;
+}
+
+/* --- Sidebar Menu --- */
+.sidebar-menu {
+  border-right: none !important;
+  padding-top: 8px; /* Add some space above menu */
+  padding-bottom: 8px; /* Add some space below menu */
+}
+
+/* General Menu Item Styling (Includes Submenu Titles) */
+.sidebar-menu .ant-menu-item,
+.sidebar-menu .ant-menu-submenu > .ant-menu-submenu-title {
+  margin: 4px 8px !important; /* Margin around items */
+  padding-left: 16px !important; /* Indentation */
+  width: calc(100% - 16px) !important; /* Full width minus margins */
+  border-radius: 6px;
+  color: #4b5563; /* Default text color */
+
+  /* Prevent text wrapping */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-menu .ant-menu-item .anticon,
+.sidebar-menu .ant-menu-submenu-title .anticon {
+  margin-right: 10px; /* Space between icon and text */
+  font-size: 16px; /* Consistent icon size */
+}
+
+/* Group Titles */
+.sidebar-menu .ant-menu-item-group-title {
+  font-size: 11px;
+  color: #9ca3af; /* Lighter grey for group titles */
+  margin-top: 16px;
+  margin-bottom: 4px;
+  padding: 0 16px !important; /* Match item indentation */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Item Hover State */
+.sidebar-menu
+  .ant-menu-item:not(.ant-menu-item-selected):not(
+    .ant-menu-item-disabled
+  ):hover,
+.sidebar-menu .ant-menu-submenu-title:not(.ant-menu-item-disabled):hover {
+  background-color: #f9fafb; /* Very light grey background on hover */
+  color: #1f2937; /* Darker text on hover */
+}
+
+/* Selected Item State */
+.sidebar-menu .ant-menu-item-selected {
+  background-color: #eef2ff !important; /* Example: Light indigo */
+  color: #4338ca !important; /* Example: Darker indigo */
+  font-weight: 500;
+}
+.sidebar-menu .ant-menu-item-selected .anticon {
+  color: #4338ca !important; /* Match text color */
+}
+
+/* Logout Item Hover */
+.sidebar-menu .ant-menu-item[aria-label="Logout"]:hover {
+  background-color: #fef2f2 !important; /* Light red */
+  color: #dc2626 !important; /* Red */
+}
+.sidebar-menu .ant-menu-item[aria-label="Logout"] .anticon:hover {
+  color: #dc2626 !important;
+}
+
+/* --- Menu Styles when Collapsed --- */
+.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item,
+.ant-layout-sider-collapsed
+  .sidebar-menu
+  .ant-menu-submenu
+  > .ant-menu-submenu-title {
+  padding: 0 calc(50% - 18px / 2) !important; /* Center icon (adjust icon size if needed) */
+}
+.ant-layout-sider-collapsed .sidebar-menu .ant-menu-title-content {
+  display: none; /* Hide text */
+}
+.ant-layout-sider-collapsed .sidebar-menu .anticon {
+  margin-right: 0; /* Remove margin next to icon */
+  font-size: 18px; /* Slightly larger icons when collapsed */
+}
+.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu-arrow {
+  display: none; /* Hide submenu arrows */
+}
+.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item-group-title {
+  display: none; /* Hide group titles */
+}
+
+/* --- Add Folder Button --- */
+.add-folder-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 16px auto;
+  text-align: left;
+  color: #6b7280;
+  padding: 8px 16px !important; /* Consistent padding */
+  height: auto !important; /* Override default button height */
+  border-radius: 6px;
+}
+.add-folder-btn:hover {
+  color: #1f2937;
+  background-color: #f9fafb;
+}
+.add-folder-btn .anticon {
+  margin-right: 10px;
+}
+
+/* Hide Add Folder button when collapsed */
+.ant-layout-sider-collapsed .add-folder-btn {
+  display: none;
+}
+
+/* --- Sidebar Trigger Area --- */
+.sidebar-trigger-area {
+  padding: 8px 0;
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fff;
+  flex-shrink: 0; /* Prevent trigger area from shrinking */
+}
+
+.sidebar-trigger-btn {
+  font-size: 18px;
+  color: #6b7280;
+  padding: 8px;
+  width: 40px; /* Make it square-ish */
+  height: 40px;
+}
+.sidebar-trigger-btn:hover {
+  color: #1f2937;
+  background-color: #f9fafb; /* Light hover background */
+}
+
+/* Styles for trigger when collapsed */
+.ant-layout-sider-collapsed .sidebar-trigger-area {
+  /* No specific styles needed unless you want to change appearance */
+}

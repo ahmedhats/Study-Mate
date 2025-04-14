@@ -1,0 +1,171 @@
+/* src/pages/DashboardPage.css */
+
+/* --- Layout & Main Content Area --- */
+
+.site-layout {
+  background-color: #f7f8fa; /* Lighter grey background */
+}
+
+.main-content {
+  padding: 24px; /* Consistent padding */
+  margin: 0; /* Remove default margin */
+  background-color: transparent; /* Let site-layout handle background */
+}
+
+/* --- Header --- */
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff !important; /* Explicit white background */
+  border-bottom: 1px solid #e5e7eb; /* Light border */
+  padding: 0 24px !important; /* Consistent padding */
+  height: 64px; /* Standard header height */
+  position: sticky; /* Keep header visible */
+  top: 0;
+  z-index: 10; /* Above content */
+}
+
+.content-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Space between breadcrumb and title */
+}
+.content-header .page-title {
+  margin-bottom: 0 !important;
+  font-size: 20px; /* Slightly larger title */
+}
+
+.content-header .header-right .ant-btn-circle {
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+.content-header .header-right .ant-btn-circle:hover {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.content-header .header-right .add-widget-btn {
+  background-color: #2563eb; /* Example blue */
+  border-color: #2563eb;
+  color: white;
+}
+.content-header .header-right .add-widget-btn:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* --- General Content Card Styling --- */
+.content-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb; /* Consistent light border */
+  border-radius: 8px;
+  margin-bottom: 24px; /* Consistent spacing below cards */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03); /* Very subtle shadow */
+}
+
+.content-card .ant-card-head {
+  border-bottom: 1px solid #f3f4f6; /* Lighter separator inside card */
+  padding: 0 24px; /* Match content padding */
+  min-height: 56px;
+}
+.content-card .ant-card-head-title {
+  padding: 16px 0;
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827; /* Darker heading */
+}
+.content-card .ant-card-extra {
+  padding: 16px 0;
+}
+.content-card .ant-card-extra .ant-btn {
+  font-size: 14px;
+  color: #4b5563; /* Grey button text */
+}
+.content-card .ant-card-extra .ant-btn:hover {
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.content-card .ant-card-body {
+  padding: 24px; /* Consistent body padding */
+}
+
+.card-subtitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 16px !important; /* Consistent spacing */
+}
+
+/* --- Welcome Title --- */
+.welcome-title {
+  margin-bottom: 24px !important;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* --- Profile Section --- */
+.profile-section-card .ant-descriptions-item-label {
+  font-weight: 500;
+  color: #6b7280;
+  width: 150px; /* Optional: Align labels */
+}
+.profile-section-card .ant-descriptions-item-content {
+  color: #374151;
+}
+.profile-section-card .profile-text {
+  /* Target Paragraph inside Descriptions */
+  margin-bottom: 0 !important; /* Remove extra margin */
+  line-height: 1.6;
+}
+
+.profile-incomplete {
+  text-align: center;
+  padding: 16px 0;
+}
+.profile-incomplete .ant-typography {
+  color: #6b7280;
+  margin-bottom: 16px;
+  display: block;
+}
+.profile-incomplete .complete-profile-btn {
+  background-color: #1f2937; /* Dark button */
+  border-color: #1f2937;
+  color: white;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+.profile-incomplete .complete-profile-btn:hover {
+  background-color: #374151;
+  border-color: #374151;
+}
+
+/* --- Dashboard Actions Section --- */
+.dashboard-actions-card .action-btn {
+  background-color: #1f2937; /* Dark background */
+  border-color: #1f2937;
+  color: white;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+.dashboard-actions-card .action-btn:hover {
+  background-color: #374151;
+  border-color: #374151;
+}
+
+/* --- Responsive Grid for Widgets (If used) --- */
+.widgets-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+/* --- Cleanup/Remove old conflicting styles if any --- */
+/* Example: remove styles targeting the old trigger button in header */
+.content-header .trigger-btn {
+  /* remove this class if it existed */
+}

@@ -135,10 +135,6 @@ const Dashboard = () => {
           <button className="action-btn">Join Study Group</button>
           <button className="action-btn">Set Study Goals</button>
         </div>
-
-        <button className="logout-btn" onClick={handleLogout}>
-          Logout
-        </button>
       </div>
     </div>
   );
