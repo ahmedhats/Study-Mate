@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar.jsx
 import React from "react";
 import { Layout, Menu, Avatar, Typography, Space, Button } from "antd";
-import { useNavigate, useLocation } from "react-router-dom"; // Added useNavigate/useLocation
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   HomeOutlined,
   SearchOutlined,
@@ -13,9 +13,8 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  // Add any other icons your menu needs
 } from "@ant-design/icons";
-import "./sidebar.css"; // Link to the rewritten CSS
+import "../../styles/sidebar.css";
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -28,7 +27,7 @@ function getItem(label, key, icon, path, children, type, onClick) {
 
 const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // Get current location for selected keys
+  const location = useLocation();
 
   // --- Menu Item Definitions ---
   // Assign unique keys and paths. Use paths for navigation.
@@ -60,7 +59,7 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
   ];
 
   // --- Handle Menu Item Click ---
-  const handleMenuClick = ({ key, keyPath, domEvent }) => {
+  const handleMenuClick = ({ key }) => {
     const clickedItem = findMenuItem(sidebarMenuItems, key);
     if (clickedItem?.onClick) {
       // If item has an onClick handler (like Logout), call it
@@ -136,7 +135,7 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
           {/* Sidebar Header */}
           <div className="sidebar-header">
             <Space align="center" className="sidebar-header-space">
-              <Avatar size="large" className="sidebar-avatar">
+              <Avatar size={40} className="sidebar-avatar">
                 {userData
                   ? `${userData.firstName?.charAt(
                       0
@@ -145,21 +144,14 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
               </Avatar>
               {!collapsed && (
                 <div className="user-info">
-                  {userData ? (
-                    <>
-                      <Text
-                        strong
-                        className="user-name"
-                      >{`${userData.firstName} ${userData.lastName}`}</Text>
-                      <Text type="secondary" className="user-email">
-                        {userData.email}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text strong className="user-name">
-                      Loading...
-                    </Text>
-                  )}
+                  <Text strong className="user-name">
+                    {userData
+                      ? `${userData.firstName} ${userData.lastName}`
+                      : "Loading..."}
+                  </Text>
+                  <Text type="secondary" className="user-email">
+                    {userData?.email}
+                  </Text>
                 </div>
               )}
             </Space>
