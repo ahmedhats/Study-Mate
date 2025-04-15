@@ -9,7 +9,13 @@ const TasksPage = () => {
   const [tasks, setTasks] = useState([]);
 
   const handleAddTask = (values) => {
-    setTasks([...tasks, { ...values, id: Date.now(), completed: false }]);
+    const formattedValues = {
+      ...values,
+      id: Date.now(),
+      completed: false,
+      dueDate: values.dueDate.format("YYYY-MM-DD"),
+    };
+    setTasks([...tasks, formattedValues]);
     setIsModalVisible(false);
     message.success("Task added successfully");
   };
@@ -30,7 +36,7 @@ const TasksPage = () => {
       </Card>
 
       <TaskModal
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         onSubmit={handleAddTask}
       />

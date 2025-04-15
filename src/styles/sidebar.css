@@ -30,6 +30,11 @@
   padding: 16px;
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar-header:hover {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .sidebar-header-space {

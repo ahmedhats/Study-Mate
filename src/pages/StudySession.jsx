@@ -5,7 +5,7 @@ import {
   PauseOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons";
-import "./StudySession.css";
+import "../styles/StudySession.css";
 
 const { Title, Text } = Typography;
 

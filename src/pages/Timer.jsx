@@ -13,7 +13,7 @@ import {
   PauseOutlined,
   RedoOutlined,
 } from "@ant-design/icons";
-import "./Timer.css";
+import "../styles/Timer.css";
 
 const { Title, Text } = Typography;
 

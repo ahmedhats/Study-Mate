@@ -6,7 +6,7 @@ import {
   MessageOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import "./StudyGroup.css";
+import "../styles/StudyGroup.css";
 
 const { Option } = Select;
 

@@ -10,7 +10,7 @@ import { getUserData } from "../services/userService";
 import StudyStats from "../components/features/dashboard/StudyStats";
 import RecentActivity from "../components/features/dashboard/RecentActivity";
 import ProfileModal from "../components/features/dashboard/ProfileModal";
-import "./Dashboard.css";
+import "../styles/Dashboard.css";
 
 const { Content } = Layout;
 
@@ -90,7 +90,7 @@ const Dashboard = () => {
 
           <div className="profile-section">
             <div className="profile-header">
-              <h2>Your Profile</h2>
+              <h2>Your prefrences</h2>
               <button
                 className="edit-profile-btn"
                 onClick={() => setIsProfileModalVisible(true)}

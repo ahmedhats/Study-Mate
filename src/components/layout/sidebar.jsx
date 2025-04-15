@@ -33,6 +33,18 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const handleProfileClick = () => {
+    navigate("/profile");
+  };
+
+  const handleLogout = () => {
+    // Clear any user data from localStorage
+    localStorage.removeItem("userData");
+    localStorage.removeItem("userProfile");
+    // Navigate to login page
+    navigate("/login");
+  };
+
   // --- Menu Item Definitions ---
   // Assign unique keys and paths. Use paths for navigation.
   const sidebarMenuItems = [
@@ -58,8 +70,16 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
 
     { type: "divider", key: "divider-1" }, // Divider
 
-    // Logout item doesn't navigate, it triggers an action
-    getItem("Logout", "logout", <LogoutOutlined />, null, null, null, onLogout),
+    // Logout item with handleLogout function
+    getItem(
+      "Logout",
+      "logout",
+      <LogoutOutlined />,
+      null,
+      null,
+      null,
+      handleLogout
+    ),
   ];
 
   // --- Handle Menu Item Click ---
@@ -137,7 +157,11 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
         {/* Scrollable area for header, menu, etc. */}
         <div className="sidebar-scrollable-content">
           {/* Sidebar Header */}
-          <div className="sidebar-header">
+          <div
+            className="sidebar-header"
+            onClick={handleProfileClick}
+            style={{ cursor: "pointer" }}
+          >
             <Space align="center" className="sidebar-header-space">
               <Avatar size={40} className="sidebar-avatar">
                 {userData
