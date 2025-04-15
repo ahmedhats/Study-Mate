@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/study-mate/static/css/main.d5754c70.css",
-    "main.js": "/study-mate/static/js/main.66dbcdc2.js",
+    "main.js": "/study-mate/static/js/main.d33ddb11.js",
     "static/css/33.53f49047.chunk.css": "/study-mate/static/css/33.53f49047.chunk.css",
     "static/js/33.064db086.chunk.js": "/study-mate/static/js/33.064db086.chunk.js",
     "static/css/510.f9a59512.chunk.css": "/study-mate/static/css/510.f9a59512.chunk.css",
@@ -26,7 +26,7 @@
     "static/js/267.c9908c89.chunk.js": "/study-mate/static/js/267.c9908c89.chunk.js",
     "index.html": "/study-mate/index.html",
     "main.d5754c70.css.map": "/study-mate/static/css/main.d5754c70.css.map",
-    "main.66dbcdc2.js.map": "/study-mate/static/js/main.66dbcdc2.js.map",
+    "main.d33ddb11.js.map": "/study-mate/static/js/main.d33ddb11.js.map",
     "33.53f49047.chunk.css.map": "/study-mate/static/css/33.53f49047.chunk.css.map",
     "33.064db086.chunk.js.map": "/study-mate/static/js/33.064db086.chunk.js.map",
     "510.f9a59512.chunk.css.map": "/study-mate/static/css/510.f9a59512.chunk.css.map",
@@ -52,6 +52,6 @@
   },
   "entrypoints": [
     "static/css/main.d5754c70.css",
-    "static/js/main.66dbcdc2.js"
+    "static/js/main.d33ddb11.js"
   ]
 }
