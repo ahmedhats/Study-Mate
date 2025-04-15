@@ -89,20 +89,23 @@ const Inbox = () => {
       }),
     };
 
-    setConversations((prev) =>
-      prev.map((conv) => {
-        if (conv.id === activeChat.id) {
-          return {
-            ...conv,
-            messages: [...conv.messages, newMsg],
-            lastMessage: newMessage,
-            time: "Just now",
-          };
-        }
-        return conv;
-      })
-    );
+    const updatedConversations = conversations.map((conv) => {
+      if (conv.id === activeChat.id) {
+        const updatedConv = {
+          ...conv,
+          messages: [...conv.messages, newMsg],
+          lastMessage: newMessage,
+          time: "Just now",
+        };
+        return updatedConv;
+      }
+      return conv;
+    });
 
+    setConversations(updatedConversations);
+    setActiveChat(
+      updatedConversations.find((conv) => conv.id === activeChat.id)
+    );
     setNewMessage("");
   };
 
@@ -111,7 +114,8 @@ const Inbox = () => {
   };
 
   const handleSelectChat = (chat) => {
-    setActiveChat(chat);
+    const selectedChat = conversations.find((conv) => conv.id === chat.id);
+    setActiveChat(selectedChat);
     setConversations((prev) =>
       prev.map((conv) => (conv.id === chat.id ? { ...conv, unread: 0 } : conv))
     );

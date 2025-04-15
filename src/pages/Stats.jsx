@@ -6,7 +6,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import StudyStats from "../components/features/dashboard/StudyStats";
-import "./Stats.css";
+import "../styles/Stats.css";
 
 const { Title, Text } = Typography;
 

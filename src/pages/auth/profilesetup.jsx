@@ -1,40 +1,208 @@
 // src/pages/ProfileSetup.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Form, Input, Select, Radio, Steps, Button, message, Spin } from "antd";
+import { updateUserData } from "../../services/userService";
 import "../styles/profilesetup.css";
 
-const ProfileSetup = () => {
-  const [profileData, setProfileData] = useState({
-    education: "",
-    major: "",
-    interests: "",
-    hobbies: "",
-    studyPreference: "individual", // default value
-  });
+const { TextArea } = Input;
+const { Step } = Steps;
 
+const ProfileSetup = () => {
+  const [form] = Form.useForm();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData((prev) => ({ ...prev, [name]: value }));
+  const steps = [
+    {
+      title: "Basic Info",
+      content: "basic-info",
+    },
+    {
+      title: "Academic Details",
+      content: "academic-details",
+    },
+    {
+      title: "Preferences",
+      content: "preferences",
+    },
+  ];
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      // Get existing user data from localStorage
+      const existingUserData = JSON.parse(
+        localStorage.getItem("userData") || "{}"
+      );
+
+      // Merge new profile data with existing user data
+      const updatedUserData = {
+        ...existingUserData,
+        ...values,
+        profileCompleted: true,
+      };
+
+      // Update user data in localStorage
+      localStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+      // Call the update service
+      await updateUserData(updatedUserData);
+
+      message.success("Profile setup completed successfully!");
+      navigate("/dashboard");
+    } catch (error) {
+      message.error("Failed to save profile. Please try again.");
+      console.error("Profile setup error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleNext = async () => {
+    try {
+      await form.validateFields(getFieldsForStep(currentStep));
+      setCurrentStep(currentStep + 1);
+    } catch (error) {
+      console.error("Validation error:", error);
+    }
+  };
 
-    // Here you would typically send this data to your backend API
-    console.log("Profile data submitted:", profileData);
+  const handleSkip = () => {
+    // Get existing user data
+    const existingUserData = JSON.parse(
+      localStorage.getItem("userData") || "{}"
+    );
 
-    // For now, we'll just save it to localStorage as a placeholder
-    localStorage.setItem("userProfile", JSON.stringify(profileData));
+    // Mark profile as incomplete
+    const updatedUserData = {
+      ...existingUserData,
+      profileCompleted: false,
+    };
 
-    // Navigate to dashboard after profile completion
+    // Update localStorage
+    localStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+    message.info("You can complete your profile later from the settings.");
     navigate("/dashboard");
   };
 
-  const skipSetup = () => {
-    // Navigate to dashboard without completing profile
-    navigate("/dashboard");
+  const getFieldsForStep = (step) => {
+    switch (step) {
+      case 0:
+        return ["education", "major"];
+      case 1:
+        return ["interests", "hobbies"];
+      case 2:
+        return ["studyPreference", "studyGoals"];
+      default:
+        return [];
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <>
+            <Form.Item
+              name="education"
+              label="Education Level"
+              rules={[
+                {
+                  required: true,
+                  message: "Please select your education level",
+                },
+              ]}
+            >
+              <Select>
+                <Select.Option value="high_school">High School</Select.Option>
+                <Select.Option value="undergraduate">
+                  Undergraduate
+                </Select.Option>
+                <Select.Option value="graduate">Graduate</Select.Option>
+                <Select.Option value="phd">PhD</Select.Option>
+                <Select.Option value="other">Other</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="major"
+              label="Field of Study/Major"
+              rules={[
+                { required: true, message: "Please enter your field of study" },
+              ]}
+            >
+              <Input placeholder="E.g., Computer Science, Biology, Literature" />
+            </Form.Item>
+          </>
+        );
+      case 1:
+        return (
+          <>
+            <Form.Item
+              name="interests"
+              label="Academic Interests"
+              rules={[
+                {
+                  required: true,
+                  message: "Please share your academic interests",
+                },
+              ]}
+            >
+              <TextArea
+                placeholder="What subjects are you most interested in studying?"
+                rows={3}
+              />
+            </Form.Item>
+            <Form.Item
+              name="hobbies"
+              label="Hobbies"
+              rules={[{ required: true, message: "Please share your hobbies" }]}
+            >
+              <TextArea
+                placeholder="What do you enjoy doing outside of your studies?"
+                rows={3}
+              />
+            </Form.Item>
+          </>
+        );
+      case 2:
+        return (
+          <>
+            <Form.Item
+              name="studyPreference"
+              label="Study Preference"
+              rules={[
+                {
+                  required: true,
+                  message: "Please select your study preference",
+                },
+              ]}
+            >
+              <Radio.Group>
+                <Radio.Button value="individual">Individual Study</Radio.Button>
+                <Radio.Button value="group">Group Study</Radio.Button>
+                <Radio.Button value="both">Both</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item
+              name="studyGoals"
+              label="Study Goals"
+              rules={[
+                { required: true, message: "Please share your study goals" },
+              ]}
+            >
+              <TextArea
+                placeholder="What are your main study goals for this semester?"
+                rows={3}
+              />
+            </Form.Item>
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -42,115 +210,48 @@ const ProfileSetup = () => {
       <div className="profile-setup-card">
         <h1 className="profile-setup-title">Complete Your Profile</h1>
         <p className="profile-setup-subtitle">
-          Help us personalize your study experience
+          Help us personalize your experience
         </p>
 
-        <form className="profile-setup-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="education">Education Level</label>
-            <select
-              id="education"
-              name="education"
-              value={profileData.education}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select your education level</option>
-              <option value="high_school">High School</option>
-              <option value="undergraduate">Undergraduate</option>
-              <option value="graduate">Graduate</option>
-              <option value="phd">PhD</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+        <Steps className="setup-steps" current={currentStep} items={steps} />
 
-          <div className="form-group">
-            <label htmlFor="major">Field of Study/Major</label>
-            <input
-              type="text"
-              id="major"
-              name="major"
-              placeholder="E.g., Computer Science, Biology, Literature"
-              value={profileData.major}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="interests">Academic Interests</label>
-            <textarea
-              id="interests"
-              name="interests"
-              placeholder="What subjects are you most interested in studying?"
-              value={profileData.interests}
-              onChange={handleChange}
-              rows="3"
-              required
-            ></textarea>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="hobbies">Hobbies</label>
-            <textarea
-              id="hobbies"
-              name="hobbies"
-              placeholder="What do you enjoy doing outside of your studies?"
-              value={profileData.hobbies}
-              onChange={handleChange}
-              rows="3"
-              required
-            ></textarea>
-          </div>
-
-          <div className="form-group">
-            <label>Study Preference</label>
-            <div className="radio-group">
-              <div className="radio-option">
-                <input
-                  type="radio"
-                  id="individual"
-                  name="studyPreference"
-                  value="individual"
-                  checked={profileData.studyPreference === "individual"}
-                  onChange={handleChange}
-                />
-                <label htmlFor="individual">Individual Study</label>
-              </div>
-              <div className="radio-option">
-                <input
-                  type="radio"
-                  id="group"
-                  name="studyPreference"
-                  value="group"
-                  checked={profileData.studyPreference === "group"}
-                  onChange={handleChange}
-                />
-                <label htmlFor="group">Group Study</label>
-              </div>
-              <div className="radio-option">
-                <input
-                  type="radio"
-                  id="both"
-                  name="studyPreference"
-                  value="both"
-                  checked={profileData.studyPreference === "both"}
-                  onChange={handleChange}
-                />
-                <label htmlFor="both">Both</label>
-              </div>
-            </div>
-          </div>
+        <Form
+          form={form}
+          layout="vertical"
+          className="profile-setup-form"
+          onFinish={handleSubmit}
+        >
+          {renderStepContent()}
 
           <div className="profile-setup-buttons">
-            <button type="button" className="skip-button" onClick={skipSetup}>
-              Skip for Now
-            </button>
-            <button type="submit" className="complete-button">
-              Complete Profile
-            </button>
+            {currentStep > 0 && (
+              <Button
+                className="prev-button"
+                onClick={() => setCurrentStep(currentStep - 1)}
+              >
+                Previous
+              </Button>
+            )}
+
+            {currentStep < steps.length - 1 && (
+              <Button type="primary" onClick={() => handleNext()}>
+                Next
+              </Button>
+            )}
+
+            {currentStep === steps.length - 1 && (
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Complete Setup
+              </Button>
+            )}
+
+            {currentStep === 0 && (
+              <Button className="skip-button" onClick={handleSkip}>
+                Skip for Now
+              </Button>
+            )}
           </div>
-        </form>
+        </Form>
       </div>
     </div>
   );

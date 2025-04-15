@@ -121,3 +121,18 @@
   opacity: 0;
   transition: opacity 200ms ease-in;
 }
+
+/* Auth Layout Styles */
+.auth-layout {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+}
+
+.auth-content {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+}

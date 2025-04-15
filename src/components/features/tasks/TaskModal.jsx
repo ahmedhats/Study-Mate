@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 const { TextArea } = Input;
 const { Option } = Select;
 
-const TaskModal = ({ visible, onCancel, onSubmit }) => {
+const TaskModal = ({ open, onCancel, onSubmit }) => {
   const [form] = Form.useForm();
 
   const handleCancel = () => {
@@ -17,6 +17,7 @@ const TaskModal = ({ visible, onCancel, onSubmit }) => {
     try {
       const values = await form.validateFields();
       onSubmit(values);
+      form.resetFields();
     } catch (error) {
       console.error("Validation failed:", error);
     }
@@ -25,7 +26,7 @@ const TaskModal = ({ visible, onCancel, onSubmit }) => {
   return (
     <Modal
       title="Add New Task"
-      open={visible}
+      open={open}
       onCancel={handleCancel}
       onOk={handleSubmit}
       destroyOnClose
