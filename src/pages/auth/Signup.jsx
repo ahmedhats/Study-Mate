@@ -1,14 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { message } from "antd";
+import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { signup } from "../../services/api/authService";
 import "../../styles/Auth.css";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    username: "",
+    name: "",
     email: "",
     password: "",
-    retypePassword: "",
+    confirmPassword: "",
+    birthDate: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({
+    username: "",
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    birthDate: "",
+    general: "",
   });
 
   const navigate = useNavigate();
@@ -16,32 +31,125 @@ const Signup = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const newErrors = {
+      username: "",
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      birthDate: "",
+      general: "",
+    };
 
-    // Check if passwords match
-    if (formData.password !== formData.retypePassword) {
-      alert("Passwords don't match!");
+    if (!formData.username) newErrors.username = "Username is required";
+    if (!formData.name) newErrors.name = "Full name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.password) newErrors.password = "Password is required";
+    if (!formData.confirmPassword)
+      newErrors.confirmPassword = "Please confirm your password";
+    if (!formData.birthDate) newErrors.birthDate = "Birth date is required";
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    if (formData.password && formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters long";
+    }
+
+    if (
+      formData.password &&
+      formData.confirmPassword &&
+      formData.password !== formData.confirmPassword
+    ) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some((error) => error !== "");
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
-    // Here you would normally handle form submission, validate data, etc.
-    console.log("Signup form submitted:", formData);
-
-    // Store basic user data in localStorage (placeholder for a real backend)
-    localStorage.setItem(
-      "userData",
-      JSON.stringify({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-      })
-    );
-
-    // Navigate to profile setup after successful signup
-    navigate("/profile-setup");
+    setLoading(true);
+    try {
+      const response = await signup(formData);
+      if (response.success) {
+        message.success(
+          "Registration successful! Please check your email to verify your account."
+        );
+        navigate("/login");
+      } else {
+        if (response.message === "Email or username already exists") {
+          setErrors({
+            ...errors,
+            email: "A user with this email already exists",
+            username: "A user with this username already exists",
+          });
+        } else {
+          let friendlyMsg =
+            response.message || "Registration failed. Please try again.";
+          if (
+            response.message &&
+            response.message.toLowerCase().includes("timeout")
+          ) {
+            friendlyMsg =
+              "Server is taking too long to respond. Please try again later.";
+          } else if (
+            response.message &&
+            response.message.toLowerCase().includes("network")
+          ) {
+            friendlyMsg =
+              "Network error. Please check your connection and try again.";
+          }
+          setErrors({
+            ...errors,
+            general: friendlyMsg,
+          });
+        }
+      }
+    } catch (error) {
+      const msg = error.message || error.response?.data?.message;
+      if (msg === "Email or username already exists") {
+        setErrors({
+          ...errors,
+          email: "A user with this email already exists",
+          username: "A user with this username already exists",
+        });
+      } else if (msg === "Missing Details") {
+        setErrors({
+          ...errors,
+          general: "Please fill in all required fields",
+        });
+      } else {
+        let friendlyMsg = msg;
+        if (msg && msg.toLowerCase().includes("timeout")) {
+          friendlyMsg =
+            "Server is taking too long to respond. Please try again later.";
+        } else if (msg && msg.toLowerCase().includes("network")) {
+          friendlyMsg =
+            "Network error. Please check your connection and try again.";
+        } else if (!msg) {
+          friendlyMsg = "Registration failed. Please try again.";
+        }
+        setErrors({
+          ...errors,
+          general: friendlyMsg,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const navigateToLogin = () => {
@@ -49,101 +157,154 @@ const Signup = () => {
   };
 
   const handleSocialSignin = (provider) => {
-    console.log(`Sign in with ${provider}`);
-    // In a real app, implement OAuth logic here
-
-    // For demonstration, directly navigate to profile setup
-    navigate("/profile-setup");
+    message.info(`${provider} sign-up will be available soon!`);
   };
 
   return (
     <div className="auth-container">
       <div className="auth-card">
         <h1 className="auth-title">Create Your Account!</h1>
-        <p className="auth-subtitle">Please Enter your details to sign in</p>
+        <p className="auth-subtitle">Please Enter your details to sign up</p>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <input
-                type="text"
-                name="firstName"
-                placeholder="First Name"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Last Name"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
+        {errors.general && (
+          <div className="error-message general-error">{errors.general}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              placeholder="Choose a username"
+              className={errors.username ? "error-input" : ""}
+            />
+            {errors.username && (
+              <div className="error-message">{errors.username}</div>
+            )}
           </div>
 
           <div className="form-group">
+            <label htmlFor="name">Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Enter your full name"
+              className={errors.name ? "error-input" : ""}
+            />
+            {errors.name && <div className="error-message">{errors.name}</div>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
             <input
               type="email"
+              id="email"
               name="email"
-              placeholder="Your Email"
               value={formData.email}
               onChange={handleChange}
               required
+              placeholder="Enter your email"
+              className={errors.email ? "error-input" : ""}
             />
+            {errors.email && (
+              <div className="error-message">{errors.email}</div>
+            )}
           </div>
 
-          <div className="form-group password-group">
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <div className="password-input-container">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Create a password"
+                className={errors.password ? "error-input" : ""}
+              />
+              <span
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              </span>
+            </div>
+            {errors.password && (
+              <div className="error-message">{errors.password}</div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm Password</label>
+            <div className="password-input-container">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                placeholder="Confirm your password"
+                className={errors.confirmPassword ? "error-input" : ""}
+              />
+            </div>
+            {errors.confirmPassword && (
+              <div className="error-message">{errors.confirmPassword}</div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="birthDate">Birth Date</label>
             <input
-              type="password"
-              name="password"
-              placeholder="Your Password"
-              value={formData.password}
+              type="date"
+              id="birthDate"
+              name="birthDate"
+              value={formData.birthDate}
               onChange={handleChange}
               required
+              className={errors.birthDate ? "error-input" : ""}
             />
-            <span className="password-toggle">👁️</span>
+            {errors.birthDate && (
+              <div className="error-message">{errors.birthDate}</div>
+            )}
           </div>
 
-          <div className="form-group password-group">
-            <input
-              type="password"
-              name="retypePassword"
-              placeholder="Retype Password"
-              value={formData.retypePassword}
-              onChange={handleChange}
-              required
-            />
-            <span className="password-toggle">👁️</span>
-          </div>
-
-          <button type="submit" className="auth-button">
-            Sign Up
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
         <div className="auth-options">
-          <p>
+          <div className="signup-option">
             Already have an account?{" "}
             <span className="auth-link" onClick={navigateToLogin}>
               Sign In
             </span>
-          </p>
+          </div>
           <div className="divider">Or</div>
           <div className="social-signin">
             <button
               className="social-button google-button"
               onClick={() => handleSocialSignin("Google")}
+              disabled={loading}
             >
               <img src="/google-icon.svg" alt="Google" /> Google
             </button>
             <button
               className="social-button apple-button"
               onClick={() => handleSocialSignin("Apple")}
+              disabled={loading}
             >
               <img src="/apple-icon.svg" alt="Apple" /> Apple
             </button>

@@ -13,7 +13,9 @@ const TaskModal = ({ open, onCancel, onSubmit }) => {
     onCancel();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    console.log("Login form submitted");
+    e.preventDefault();
     try {
       const values = await form.validateFields();
       onSubmit(values);
@@ -36,8 +38,10 @@ const TaskModal = ({ open, onCancel, onSubmit }) => {
         layout="vertical"
         initialValues={{
           priority: "medium",
+          status: "todo",
           dueDate: dayjs(),
         }}
+        onSubmit={handleSubmit}
       >
         <Form.Item
           name="title"
@@ -47,12 +51,26 @@ const TaskModal = ({ open, onCancel, onSubmit }) => {
               required: true,
               message: "Please enter a task title",
             },
+            {
+              min: 3,
+              max: 100,
+              message: "Title must be between 3 and 100 characters",
+            },
           ]}
         >
           <Input placeholder="Enter task title" />
         </Form.Item>
 
-        <Form.Item name="description" label="Description">
+        <Form.Item
+          name="description"
+          label="Description"
+          rules={[
+            {
+              max: 1000,
+              message: "Description cannot exceed 1000 characters",
+            },
+          ]}
+        >
           <TextArea
             rows={4}
             placeholder="Enter task description"
@@ -60,7 +78,7 @@ const TaskModal = ({ open, onCancel, onSubmit }) => {
           />
         </Form.Item>
 
-        <Space>
+        <Space size="large" style={{ width: "100%" }}>
           <Form.Item
             name="priority"
             label="Priority"
@@ -72,9 +90,28 @@ const TaskModal = ({ open, onCancel, onSubmit }) => {
             ]}
           >
             <Select style={{ width: 120 }}>
+              <Option value="urgent">Urgent</Option>
               <Option value="high">High</Option>
               <Option value="medium">Medium</Option>
               <Option value="low">Low</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="status"
+            label="Status"
+            rules={[
+              {
+                required: true,
+                message: "Please select a status",
+              },
+            ]}
+          >
+            <Select style={{ width: 120 }}>
+              <Option value="todo">To Do</Option>
+              <Option value="in_progress">In Progress</Option>
+              <Option value="completed">Completed</Option>
+              <Option value="archived">Archived</Option>
             </Select>
           </Form.Item>
 

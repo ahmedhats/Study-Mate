@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Input, Select, Radio, Steps, Button, message, Spin } from "antd";
-import { updateUserData } from "../../services/userService";
+import { updateUserProfile } from "../../services/api/userService";
 import "../styles/profilesetup.css";
 
 const { TextArea } = Input;
@@ -48,7 +48,7 @@ const ProfileSetup = () => {
       localStorage.setItem("userData", JSON.stringify(updatedUserData));
 
       // Call the update service
-      await updateUserData(updatedUserData);
+      await updateUserProfile(updatedUserData);
 
       message.success("Profile setup completed successfully!");
       navigate("/dashboard");

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Tabs,
   Avatar,
@@ -9,6 +9,7 @@ import {
   Badge,
   List,
   Card,
+  message,
 } from "antd";
 import {
   CalendarOutlined,
@@ -16,71 +17,43 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import EditProfileModal from "./components/EditProfileModal";
+import { getUserProfile } from "../../services/api/userService";
 
 const MyProfile = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("activity");
+  const [userData, setUserData] = useState(null);
 
-  const userData = {
-    name: "Mangcoding Official",
-    email: "hello@mangcoding.com",
-    gender: "Male",
-    birthday: "10/18/2023",
-    firstSeen: "19 Jan 2024",
-    type: "Regular",
-    status: "Online",
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const data = await getUserProfile();
+      setUserData(data);
+    } catch (error) {
+      message.error("Failed to fetch user profile");
+    }
   };
 
-  const workItems = [
-    {
-      title: "JobFinder App - Landing Page",
-      status: "To-Do",
-      progress: 80,
-      assignees: ["user1"],
-      priority: "Normal",
-      dueDate: "2024-02-20",
-    },
-    {
-      title: "Mine Project - Company Profile",
-      status: "On Progress",
-      progress: 80,
-      assignees: ["user1"],
-      priority: "Normal",
-      dueDate: "2024-02-25",
-    },
-  ];
+  // Default mock user data with zeros/empty fields
+  const defaultUserData = {
+    name: "User",
+    email: "",
+    birthday: "",
+    firstSeen: "",
+    type: "Regular",
+    status: "Online",
+    workItems: [],
+    assignedTasks: [],
+    calendarEvents: [],
+  };
 
-  const assignedTasks = [
-    {
-      title: "Review Frontend Code",
-      status: "In Review",
-      progress: 60,
-      assignedBy: "John Doe",
-      priority: "High",
-      dueDate: "2024-02-22",
-    },
-    {
-      title: "Update Documentation",
-      status: "Pending",
-      progress: 30,
-      assignedBy: "Sarah Smith",
-      priority: "Medium",
-      dueDate: "2024-02-24",
-    },
-  ];
-
-  const calendarEvents = [
-    {
-      title: "Team Meeting",
-      date: "2024-02-20",
-      type: "meeting",
-    },
-    {
-      title: "Project Deadline",
-      date: "2024-02-25",
-      type: "deadline",
-    },
-  ];
+  const displayUserData = userData || defaultUserData;
+  const workItems = displayUserData.workItems || [];
+  const assignedTasks = displayUserData.assignedTasks || [];
+  const calendarEvents = displayUserData.calendarEvents || [];
 
   const getEventTypeColor = (type) => {
     const colors = {
@@ -108,11 +81,12 @@ const MyProfile = () => {
                   {item.status}
                 </Tag>
                 <Avatar.Group>
-                  {item.assignees.map((user, i) => (
-                    <Avatar key={i} size="small">
-                      U
-                    </Avatar>
-                  ))}
+                  {item.assignees &&
+                    item.assignees.map((user, i) => (
+                      <Avatar key={i} size="small">
+                        U
+                      </Avatar>
+                    ))}
                 </Avatar.Group>
                 <Tag color="blue">{item.priority}</Tag>
                 <Button type="text" icon={<MoreOutlined />} />
@@ -220,11 +194,11 @@ const MyProfile = () => {
       <div className="profile-info">
         <div className="profile-header">
           <Avatar size={64} className="profile-avatar">
-            MO
+            {displayUserData.name ? displayUserData.name[0] : "U"}
           </Avatar>
           <div className="profile-details">
-            <h2>{userData.name}</h2>
-            <p>{userData.email}</p>
+            <h2>{displayUserData.name}</h2>
+            <p>{displayUserData.email}</p>
             <Button type="link" onClick={() => setIsEditModalVisible(true)}>
               Edit Profile
             </Button>
@@ -232,19 +206,19 @@ const MyProfile = () => {
           <div className="profile-meta">
             <div className="meta-item">
               <span className="label">Birthday</span>
-              <span className="value">{userData.birthday}</span>
+              <span className="value">{displayUserData.birthday}</span>
             </div>
             <div className="meta-item">
               <span className="label">First seen</span>
-              <span className="value">{userData.firstSeen}</span>
+              <span className="value">{displayUserData.firstSeen}</span>
             </div>
             <div className="meta-item">
               <span className="label">Type</span>
-              <span className="value">{userData.type}</span>
+              <span className="value">{displayUserData.type}</span>
             </div>
             <div className="meta-item">
               <span className="label">User</span>
-              <Tag color="success">{userData.status}</Tag>
+              <Tag color="success">{displayUserData.status}</Tag>
             </div>
           </div>
         </div>
@@ -260,7 +234,8 @@ const MyProfile = () => {
       <EditProfileModal
         visible={isEditModalVisible}
         onCancel={() => setIsEditModalVisible(false)}
-        userData={userData}
+        userData={displayUserData}
+        onProfileUpdated={fetchUserData}
       />
     </div>
   );

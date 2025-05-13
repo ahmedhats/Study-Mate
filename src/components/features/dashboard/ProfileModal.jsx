@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Form, Input, Select, message } from "antd";
-import { updateUserData } from "../../../services/userService";
+import { updateUserProfile } from "../../../services/api/userService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -10,7 +10,7 @@ const ProfileModal = ({ visible, onCancel, onFinish, initialValues }) => {
 
   const handleSubmit = async (values) => {
     try {
-      await updateUserData(values);
+      await updateUserProfile(values);
       message.success("Profile updated successfully");
       onFinish(values);
     } catch (error) {

@@ -1,77 +1,136 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Progress, Space, Typography } from "antd";
+import { Card, Button, Input, List, Avatar, message, Modal, Form } from "antd";
 import {
-  ClockCircleOutlined,
-  PauseOutlined,
-  PlayCircleOutlined,
+  UserOutlined,
+  VideoCameraOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
-import "../styles/StudySession.css";
+import { useNavigate } from "react-router-dom";
+import {
+  createStudySession,
+  joinStudySession,
+  leaveStudySession,
+} from "../services/api/studySessionService";
 
-const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 const StudySession = () => {
-  const [time, setTime] = useState(0);
-  const [isActive, setIsActive] = useState(false);
-  const [goalTime] = useState(4 * 60 * 60); // 4 hours in seconds
+  const [sessions, setSessions] = useState([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    let interval = null;
-    if (isActive) {
-      interval = setInterval(() => {
-        setTime((time) => time + 1);
-      }, 1000);
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const response = await fetch("/api/study-sessions");
+      const data = await response.json();
+      setSessions(data);
+    } catch (error) {
+      message.error("Failed to fetch study sessions");
     }
-    return () => clearInterval(interval);
-  }, [isActive]);
-
-  const toggleTimer = () => {
-    setIsActive(!isActive);
   };
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours}h ${minutes}m ${secs}s`;
+  const handleCreateSession = async (values) => {
+    try {
+      const session = await createStudySession(values);
+      setSessions([...sessions, session]);
+      setIsModalVisible(false);
+      form.resetFields();
+      message.success("Study session created successfully");
+    } catch (error) {
+      message.error("Failed to create study session");
+    }
   };
 
-  const progress = Math.min((time / goalTime) * 100, 100);
+  const handleJoinSession = async (sessionId) => {
+    try {
+      await joinStudySession(sessionId);
+      navigate(`/study-session/${sessionId}`);
+      message.success("Joined study session successfully");
+    } catch (error) {
+      message.error("Failed to join study session");
+    }
+  };
 
   return (
-    <div className="study-session-container">
-      <Card className="study-session-card">
-        <Title level={2}>Study Session</Title>
-
-        <div className="timer-display">
-          <Progress
-            type="circle"
-            percent={progress}
-            format={() => (
-              <div className="timer-text">
-                <ClockCircleOutlined />
-                <Text>{formatTime(time)}</Text>
-              </div>
-            )}
-            size={200}
-          />
-        </div>
-
-        <Space className="timer-controls">
+    <div style={{ padding: "24px" }}>
+      <Card
+        title="Study Sessions"
+        extra={
           <Button
             type="primary"
-            size="large"
-            icon={isActive ? <PauseOutlined /> : <PlayCircleOutlined />}
-            onClick={toggleTimer}
+            onClick={() => setIsModalVisible(true)}
+            icon={<VideoCameraOutlined />}
           >
-            {isActive ? "Pause" : "Start"}
+            Create Session
           </Button>
-        </Space>
-
-        <div className="session-info">
-          <Text>Daily Goal: {formatTime(goalTime)}</Text>
-          <Text>Progress: {Math.round(progress)}%</Text>
-        </div>
+        }
+      >
+        <List
+          dataSource={sessions}
+          renderItem={(session) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="primary"
+                  onClick={() => handleJoinSession(session._id)}
+                >
+                  Join
+                </Button>,
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={session.title}
+                description={
+                  <div>
+                    <p>{session.description}</p>
+                    <p>
+                      <MessageOutlined /> {session.participants.length}{" "}
+                      participants
+                    </p>
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+        />
       </Card>
+
+      <Modal
+        title="Create Study Session"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} onFinish={handleCreateSession} layout="vertical">
+          <Form.Item
+            name="title"
+            label="Title"
+            rules={[{ required: true, message: "Please enter a title" }]}
+          >
+            <Input placeholder="Enter session title" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: "Please enter a description" }]}
+          >
+            <TextArea rows={4} placeholder="Enter session description" />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Create Session
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -1,11 +1,12 @@
-import React, { useState } from "react";
-import { Layout } from "antd";
+import React, { useState, useEffect } from "react";
+import { Layout, message } from "antd";
 import { ChatContainer } from "../styles/InboxStyles";
 import ConversationList from "../components/features/inbox/ConversationList";
 import ChatHeader from "../components/features/inbox/ChatHeader";
 import MessagesArea from "../components/features/inbox/MessagesArea";
 import InputBox from "../components/features/inbox/InputBox";
 import NoChat from "../components/features/inbox/NoChat";
+import websocketService from "../services/websocket/websocketService";
 
 const { Content, Sider } = Layout;
 
@@ -75,6 +76,48 @@ const Inbox = () => {
     },
   ]);
 
+  useEffect(() => {
+    // Connect to WebSocket when component mounts
+    websocketService.connect();
+
+    // Subscribe to chat messages
+    const handleChatMessage = (data) => {
+      setConversations((prevConversations) => {
+        const updatedConversations = prevConversations.map((conv) => {
+          if (conv.id === data.senderId) {
+            const newMsg = {
+              id: Date.now(),
+              content: data.message,
+              sender: conv.name,
+              isSender: false,
+              time: new Date(data.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            };
+            return {
+              ...conv,
+              messages: [...conv.messages, newMsg],
+              lastMessage: data.message,
+              time: "Just now",
+              unread: conv.id === activeChat?.id ? 0 : conv.unread + 1,
+            };
+          }
+          return conv;
+        });
+        return updatedConversations;
+      });
+    };
+
+    websocketService.subscribe("chat", handleChatMessage);
+
+    // Cleanup on unmount
+    return () => {
+      websocketService.unsubscribe("chat", handleChatMessage);
+      websocketService.disconnect();
+    };
+  }, [activeChat]);
+
   const handleSendMessage = () => {
     if (!newMessage.trim() || !activeChat) return;
 
@@ -89,15 +132,18 @@ const Inbox = () => {
       }),
     };
 
+    // Send message through WebSocket
+    websocketService.sendChatMessage(activeChat.id, newMessage);
+
+    // Update local state
     const updatedConversations = conversations.map((conv) => {
       if (conv.id === activeChat.id) {
-        const updatedConv = {
+        return {
           ...conv,
           messages: [...conv.messages, newMsg],
           lastMessage: newMessage,
           time: "Just now",
         };
-        return updatedConv;
       }
       return conv;
     });

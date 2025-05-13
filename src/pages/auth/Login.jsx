@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { message } from "antd";
+import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { login } from "../../services/api/authService";
 import "../../styles/Auth.css";
 
 const Login = () => {
@@ -7,6 +10,13 @@ const Login = () => {
     email: "",
     password: "",
     rememberMe: false,
+  });
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+    general: "",
   });
 
   const navigate = useNavigate();
@@ -17,22 +27,83 @@ const Login = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    // Clear error when user starts typing
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would normally handle form submission, validate data, etc.
-    console.log("Login form submitted:", formData);
-
-    // Check if the user has completed their profile
-    const userProfile = localStorage.getItem("userProfile");
-
-    if (userProfile) {
-      // If profile exists, go directly to dashboard
-      navigate("/dashboard");
+  // Helper for showing error messages
+  const showLoginError = (msg) => {
+    if (msg === "Invalid email or password") {
+      setErrors({
+        email: "Incorrect email or password",
+        password: "Incorrect email or password",
+        general: "",
+      });
+    } else if (msg === "Please verify your email address") {
+      setErrors({
+        email: "",
+        password: "",
+        general: "Please verify your email address before logging in",
+      });
+    } else if (msg === "Email and Password are required") {
+      setErrors({
+        email: "Email is required",
+        password: "Password is required",
+        general: "",
+      });
     } else {
-      // If no profile exists, go to profile setup
-      navigate("/profile-setup");
+      setErrors({
+        email: "",
+        password: "",
+        general: msg || "Login failed. Please try again.",
+      });
+    }
+  };
+
+  // Simple client-side validation for email format
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    // Reset errors
+    setErrors({ email: "", password: "", general: "" });
+
+    // Client-side validation
+    if (!formData.email || !formData.password) {
+      showLoginError("Email and Password are required");
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      setErrors((prev) => ({
+        ...prev,
+        email: "Please enter a valid email address",
+      }));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await login({
+        email: formData.email,
+        password: formData.password,
+      });
+      if (response.success) {
+        message.success("Login successful!");
+        if (response.user && response.user.profileCompleted === false) {
+          navigate("/profilesetup");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        showLoginError(response.message);
+      }
+    } catch (error) {
+      const msg = error.message || error.response?.data?.message;
+      showLoginError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,17 +116,7 @@ const Login = () => {
   };
 
   const handleSocialSignin = (provider) => {
-    console.log(`Sign in with ${provider}`);
-    // In a real app, implement OAuth logic here
-
-    // For demonstration, we'll just check for profile and redirect
-    const userProfile = localStorage.getItem("userProfile");
-
-    if (userProfile) {
-      navigate("/dashboard");
-    } else {
-      navigate("/profile-setup");
-    }
+    message.info(`${provider} sign-in will be available soon!`);
   };
 
   return (
@@ -64,54 +125,76 @@ const Login = () => {
         <h1 className="auth-title">Welcome Back!</h1>
         <p className="auth-subtitle">Please Enter your details to sign in</p>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        {errors.general && (
+          <div className="error-message general-error">{errors.general}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
           <div className="form-group">
+            <label htmlFor="email">Email</label>
             <input
               type="email"
+              id="email"
               name="email"
-              placeholder="Your Email"
               value={formData.email}
               onChange={handleChange}
               required
+              placeholder="Enter your email"
+              className={errors.email ? "error-input" : ""}
             />
+            {errors.email && (
+              <div className="error-message">{errors.email}</div>
+            )}
           </div>
 
-          <div className="form-group password-group">
-            <input
-              type="password"
-              name="password"
-              placeholder="Your Password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-            <span className="password-toggle">👁️</span>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <div className="password-input-container">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter your password"
+                className={errors.password ? "error-input" : ""}
+              />
+              <span
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              </span>
+            </div>
+            {errors.password && (
+              <div className="error-message">{errors.password}</div>
+            )}
           </div>
 
           <div className="form-options">
-            <div className="remember-me">
+            <label className="remember-me">
               <input
                 type="checkbox"
-                id="rememberMe"
                 name="rememberMe"
                 checked={formData.rememberMe}
                 onChange={handleChange}
               />
-              <label htmlFor="rememberMe">Remember account</label>
-            </div>
-            <div className="forgot-password" onClick={handleForgotPassword}>
-              Forgot Password
-            </div>
+              Remember me
+            </label>
+            <span className="forgot-password" onClick={handleForgotPassword}>
+              Forgot password?
+            </span>
           </div>
 
-          <button type="submit" className="auth-button">
-            Sign in
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <div className="auth-options">
           <div className="signup-option">
-            You Don't have account?{" "}
+            Don't have an account?{" "}
             <span className="auth-link" onClick={navigateToSignup}>
               Sign Up
             </span>
@@ -121,12 +204,14 @@ const Login = () => {
             <button
               className="social-button google-button"
               onClick={() => handleSocialSignin("Google")}
+              disabled={loading}
             >
               <img src="/google-icon.svg" alt="Google" /> Google
             </button>
             <button
               className="social-button apple-button"
               onClick={() => handleSocialSignin("Apple")}
+              disabled={loading}
             >
               <img src="/apple-icon.svg" alt="Apple" /> Apple
             </button>

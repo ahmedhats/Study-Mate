@@ -1,13 +1,25 @@
 import React from "react";
-import { Modal, Form, Input, Button, Upload } from "antd";
+import { Modal, Form, Input, Button, Upload, message } from "antd";
 import { EyeInvisibleOutlined, EyeTwoTone } from "@ant-design/icons";
+import { updateUserProfile } from "../../../services/api/userService";
 
-const EditProfileModal = ({ visible, onCancel, userData }) => {
+const EditProfileModal = ({
+  visible,
+  onCancel,
+  userData,
+  onProfileUpdated,
+}) => {
   const [form] = Form.useForm();
 
-  const handleSubmit = (values) => {
-    console.log("Updated values:", values);
-    onCancel();
+  const handleSubmit = async (values) => {
+    try {
+      await updateUserProfile(values);
+      message.success("Profile updated successfully");
+      if (onProfileUpdated) onProfileUpdated();
+      onCancel();
+    } catch (error) {
+      message.error("Failed to update profile");
+    }
   };
 
   return (
@@ -32,7 +44,9 @@ const EditProfileModal = ({ visible, onCancel, userData }) => {
             showUploadList={false}
           >
             <div className="upload-button">
-              <span className="upload-text">mangcoding.png</span>
+              <span className="upload-text">
+                {userData?.avatar || "Upload image"}
+              </span>
               <Button type="link" className="remove-image">
                 Remove Image
               </Button>
@@ -42,21 +56,21 @@ const EditProfileModal = ({ visible, onCancel, userData }) => {
 
         <div className="form-row">
           <Form.Item name="firstName" label="First Name" className="form-col">
-            <Input placeholder="Mangcoding" />
+            <Input placeholder="First Name" />
           </Form.Item>
 
           <Form.Item name="lastName" label="Last Name" className="form-col">
-            <Input placeholder="Official" />
+            <Input placeholder="Last Name" />
           </Form.Item>
         </div>
 
         <div className="form-row">
           <Form.Item name="email" label="Email" className="form-col">
-            <Input placeholder="hello@mangcoding.com" />
+            <Input placeholder="Email" />
           </Form.Item>
 
           <Form.Item name="phone" label="Phone" className="form-col">
-            <Input placeholder="+62 81234 5123 4522" />
+            <Input placeholder="Phone" />
           </Form.Item>
         </div>
 
