@@ -134,6 +134,12 @@ const EditProfileModal = ({
     }
   };
 
+  // Add a handle cancel function to make the behavior explicit
+  const handleCancel = () => {
+    form.resetFields();
+    onCancel();
+  };
+
   const educationOptions = [
     { value: "high_school", label: "High School" },
     { value: "bachelors", label: "Bachelor's" },
@@ -178,7 +184,7 @@ const EditProfileModal = ({
     <Modal
       title="Edit Profile"
       open={visible}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       footer={null}
       width={600}
       centered
@@ -383,7 +389,7 @@ const EditProfileModal = ({
           </Form.Item>
 
           <div className="form-actions">
-            <Button onClick={onCancel}>Cancel</Button>
+            <Button onClick={handleCancel}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={loading}>
               Save Changes
             </Button>

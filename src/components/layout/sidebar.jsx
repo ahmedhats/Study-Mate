@@ -27,6 +27,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import "../../styles/sidebar.css";
 
@@ -46,6 +47,24 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const screens = useBreakpoint();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Track window size changes for responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+
+      // Auto-collapse sidebar on smaller screens
+      if (window.innerWidth < 992 && !collapsed) {
+        setCollapsed(true);
+      } else if (window.innerWidth >= 1200 && collapsed) {
+        setCollapsed(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [collapsed, setCollapsed]);
 
   // Load user data from localStorage
   useEffect(() => {
@@ -80,6 +99,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   const handleProfileClick = () => {
     navigate("/profile");
+    if (isMobile) {
+      setDrawerVisible(false);
+    }
   };
 
   const handleLogout = () => {
@@ -88,6 +110,14 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     localStorage.removeItem("userProfile");
     // Navigate to login page
     navigate("/login");
+    // Close mobile drawer if open
+    if (drawerVisible) {
+      setDrawerVisible(false);
+    }
+  };
+
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
   };
 
   // --- Menu Item Definitions ---
@@ -95,9 +125,10 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const sidebarMenuItems = [
     getItem("Main Menu", "grp1", null, null, null, "group"), // Group title
     getItem("Dashboard", "dashboard", <HomeOutlined />, "/dashboard"),
-    getItem("Search", "search", <SearchOutlined />, "/search"), // Example path
+    getItem("Communities", "search", <SearchOutlined />, "/search"), // Communities page
     getItem("Inbox", "inbox", <InboxOutlined />, "/inbox"), // Example path
     getItem("My Task", "my-task", <CheckSquareOutlined />, "/tasks"), // Example path
+    getItem("Calendar", "calendar", <CalendarOutlined />, "/calendar"), // New Calendar item
     getItem("Social", "social", <TeamOutlined />, "/profile/social"), // Updated label and path
 
     getItem("Teamspaces", "grp2", null, null, null, "group"), // Group title
@@ -181,8 +212,20 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   // --- Determine Open Submenus (Optional - for complex nesting) ---
   const getDefaultOpenKeys = () => {
-    // You could add logic here to open submenus based on the selected key
-    return ["mine-design", "purweb-design"]; // Keep teamspaces open by default for now
+    const currentPath = location.pathname;
+    const openKeys = [];
+
+    // Add mine-design to open keys if on a mine-design path
+    if (currentPath.includes("/mine-design")) {
+      openKeys.push("mine-design");
+    }
+
+    // Add purweb-design to open keys if on a purweb path
+    if (currentPath.includes("/purweb")) {
+      openKeys.push("purweb-design");
+    }
+
+    return openKeys;
   };
 
   // --- Responsive rendering ---
@@ -241,6 +284,20 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           onClick={handleMenuClick}
         />
       </div>
+
+      {/* Collapse/Expand Trigger - Hide on very small screens */}
+      {windowWidth > 576 && (
+        <div className="sidebar-trigger-area">
+          <Button
+            type="text"
+            className="sidebar-trigger-btn"
+            onClick={toggleCollapsed}
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          >
+            {!collapsed && "Collapse Menu"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 
@@ -251,15 +308,14 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         <Button
           className="sidebar-mobile-trigger"
           icon={drawerVisible ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-          style={{ position: "fixed", top: 16, left: 16, zIndex: 1100 }}
           onClick={() => setDrawerVisible((v) => !v)}
         />
         <Drawer
           title="Menu"
-          placement="top"
+          placement="left"
           open={drawerVisible}
           onClose={() => setDrawerVisible(false)}
-          height="auto"
+          width={windowWidth < 400 ? "85%" : "270px"}
           bodyStyle={{ padding: 0 }}
           className="sidebar-mobile-drawer"
         >

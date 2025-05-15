@@ -1,0 +1,122 @@
+.todo-card {
+  margin-bottom: 12px;
+  transition: all 0.3s;
+  border-radius: 8px;
+}
+
+.todo-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+}
+
+.todo-completed {
+  opacity: 0.75;
+  background-color: #f9f9f9;
+}
+
+.todo-overdue {
+  border-left: 3px solid #ff4d4f;
+}
+
+.todo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.todo-checkbox-title {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.todo-checkbox {
+  margin-top: 4px;
+  margin-right: 8px;
+}
+
+.todo-title-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.todo-title {
+  font-size: 16px;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.todo-due-date {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.todo-overdue-text {
+  color: #ff4d4f;
+}
+
+.todo-description {
+  margin-bottom: 8px;
+  color: #595959;
+  font-size: 14px;
+}
+
+.todo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.todo-progress {
+  margin-top: 8px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.expand-button {
+  padding: 0;
+  transition: transform 0.2s;
+}
+
+.expanded {
+  transform: rotate(90deg);
+}
+
+.subtasks-container {
+  margin-top: 8px;
+  padding-left: 24px;
+  border-left: 1px dashed #d9d9d9;
+}
+
+.subtask-item {
+  padding: 4px 0 !important;
+  border: none !important;
+}
+
+.todo-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive styles */
+@media (max-width: 576px) {
+  .todo-header {
+    flex-direction: column;
+  }
+
+  .todo-actions {
+    margin-top: 8px;
+    align-self: flex-end;
+  }
+
+  .todo-title-container {
+    max-width: calc(100% - 24px);
+  }
+}

@@ -23,6 +23,27 @@
   margin-top: 8px;
 }
 
+.task-team-members {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.task-team-members .ant-avatar-group {
+  margin-left: 5px;
+}
+
+.task-importance-tag {
+  margin-right: 8px;
+}
+
+.task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
 .subtasks-container {
   padding-left: 32px;
   margin-top: 8px;
@@ -55,4 +76,35 @@
 /* Subtask list */
 .subtasks-container .ant-list-item {
   padding: 6px 0;
+}
+
+/* Permission colors */
+.permission-view {
+  background-color: #1890ff;
+}
+
+.permission-edit {
+  background-color: #52c41a;
+}
+
+.permission-admin {
+  background-color: #faad14;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .task-list-item .ant-list-item-action {
+    margin-left: 0;
+    padding-left: 0;
+    margin-top: 8px;
+  }
+
+  .task-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .task-tags {
+    margin-top: 8px;
+  }
 }

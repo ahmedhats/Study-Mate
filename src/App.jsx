@@ -1,4 +1,4 @@
-﻿﻿import React, { Suspense, useState } from "react";
+﻿import React, { Suspense, useState, useEffect } from "react";
 import { Layout, Spin } from "antd";
 import {
   HashRouter as Router,
@@ -19,6 +19,7 @@ const Stats = React.lazy(() => import("./pages/Stats"));
 const StudyGroup = React.lazy(() => import("./pages/StudyGroup"));
 const Team = React.lazy(() => import("./pages/Team"));
 const Tasks = React.lazy(() => import("./pages/Tasks"));
+const CalendarPage = React.lazy(() => import("./pages/CalendarPage"));
 const Search = React.lazy(() => import("./pages/Search"));
 const Inbox = React.lazy(() => import("./pages/Inbox"));
 const MineDesign = React.lazy(() => import("./pages/mine-design/MineDesign"));
@@ -126,6 +127,33 @@ const AuthLayout = ({ children }) => {
 // Main Layout - with sidebar
 const MainLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Initialize sidebar state based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      // Auto-collapse sidebar on smaller screens
+      if (window.innerWidth < 992 && !collapsed) {
+        setCollapsed(true);
+      } else if (
+        window.innerWidth >= 1200 &&
+        collapsed &&
+        windowWidth >= 1200
+      ) {
+        // Only auto-expand if we were already on a large screen
+        setCollapsed(false);
+      }
+    };
+
+    // Set initial state
+    if (window.innerWidth < 992) {
+      setCollapsed(true);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [collapsed, windowWidth]);
 
   return (
     <Layout className="main-layout">
@@ -314,6 +342,18 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <Profile />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Calendar route */}
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CalendarPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -341,8 +341,8 @@ const MyProfile = () => {
       {isEditModalVisible && (
         <EditProfileModal
           visible={isEditModalVisible}
-          onClose={() => setIsEditModalVisible(false)}
-          onSave={() => {
+          onCancel={() => setIsEditModalVisible(false)}
+          onProfileUpdated={() => {
             setIsEditModalVisible(false);
             fetchUserData(); // Refresh data after saving
           }}

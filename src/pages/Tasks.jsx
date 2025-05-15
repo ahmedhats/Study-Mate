@@ -1,23 +1,67 @@
 import React, { useState, useEffect } from "react";
-import { Card, message, Spin, notification } from "antd";
+import {
+  Card,
+  message,
+  Spin,
+  notification,
+  Select,
+  Row,
+  Col,
+  Input,
+  Radio,
+  Button,
+  Tabs,
+} from "antd";
+import { CalendarOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import TaskModal from "../components/features/tasks/TaskModal";
 import TaskHeader from "../components/features/tasks/TaskHeader";
 import TaskList from "../components/features/tasks/TaskList";
+import TodoList from "../components/features/tasks/TodoList";
 import {
   getAllTasks,
   createTask,
   updateTask,
   deleteTask,
 } from "../services/api/taskService";
+import { getAllUsers } from "../services/api/userService";
 import websocketService from "../services/websocket/websocketService";
+import "./Tasks.css";
+
+const { Option } = Select;
+const { Search } = Input;
+const { TabPane } = Tabs;
 
 const TasksPage = () => {
+  const navigate = useNavigate();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [editingTask, setEditingTask] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [activeView, setActiveView] = useState("classic"); // 'classic' or 'todo'
+
+  // Filtering state
+  const [importanceFilter, setImportanceFilter] = useState(null);
+  const [priorityFilter, setPriorityFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [searchText, setSearchText] = useState("");
+  const [sortBy, setSortBy] = useState("dueDate"); // Default sort by due date
 
   useEffect(() => {
     fetchTasks();
+    fetchUsers();
+
+    // Get current user data from localStorage
+    try {
+      const userData = JSON.parse(localStorage.getItem("userData"));
+      if (userData && userData.user) {
+        setCurrentUser(userData.user);
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
   }, []);
 
   const notifyUpcomingTasks = (tasks) => {
@@ -35,6 +79,17 @@ const TasksPage = () => {
         }
       }
     });
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await getAllUsers();
+      if (response.data && response.data.success) {
+        setUsers(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
   };
 
   const fetchTasks = async () => {
@@ -114,6 +169,7 @@ const TasksPage = () => {
       );
       setIsModalVisible(false);
       message.success("Task added successfully");
+      setEditingTask(null);
       await fetchTasks();
     } catch (error) {
       const errMsg =
@@ -156,6 +212,7 @@ const TasksPage = () => {
         localStorage.setItem("tasks_backup", JSON.stringify(localTasks));
         setTasks([...tasks, offlineTask]);
         setIsModalVisible(false);
+        setEditingTask(null);
         message.success("Task saved locally (offline mode)");
       }
     }
@@ -266,6 +323,137 @@ const TasksPage = () => {
     }
   };
 
+  const handleOpenEditTask = (task) => {
+    setEditingTask(task);
+    setIsModalVisible(true);
+  };
+
+  const handleTaskModalCancel = () => {
+    setIsModalVisible(false);
+    setEditingTask(null);
+  };
+
+  // Update subtask completion
+  const handleUpdateSubtask = (taskId, subtaskIndex, checked) => {
+    const task = tasks.find((t) => t._id === taskId);
+    if (!task || !task.subtasks) return;
+
+    const updatedSubtasks = [...task.subtasks];
+    updatedSubtasks[subtaskIndex].completed = checked;
+
+    // Calculate new progress based on subtasks
+    const totalSubtasks = updatedSubtasks.length;
+    const completedSubtasks = updatedSubtasks.filter(
+      (st) => st.completed
+    ).length;
+    const progress = totalSubtasks
+      ? Math.round((completedSubtasks / totalSubtasks) * 100)
+      : 0;
+
+    // Update task with new subtasks and progress
+    const updatedTask = {
+      ...task,
+      subtasks: updatedSubtasks,
+      progress,
+      // If all subtasks are completed, mark the task as completed
+      status:
+        totalSubtasks && completedSubtasks === totalSubtasks
+          ? "completed"
+          : completedSubtasks > 0
+          ? "in_progress"
+          : task.status,
+    };
+
+    handleUpdateTask(taskId, updatedTask);
+  };
+
+  // Filter and sort tasks
+  const getFilteredTasks = () => {
+    let filteredTasks = [...tasks];
+
+    // Apply importance filter
+    if (importanceFilter) {
+      filteredTasks = filteredTasks.filter(
+        (task) => task.importance === importanceFilter
+      );
+    }
+
+    // Apply priority filter
+    if (priorityFilter) {
+      filteredTasks = filteredTasks.filter(
+        (task) => task.priority === priorityFilter
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+      filteredTasks = filteredTasks.filter(
+        (task) => task.status === statusFilter
+      );
+    }
+
+    // Apply search text filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filteredTasks = filteredTasks.filter(
+        (task) =>
+          task.title?.toLowerCase().includes(searchLower) ||
+          task.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sort tasks
+    filteredTasks.sort((a, b) => {
+      switch (sortBy) {
+        case "dueDate":
+          // Sort by due date (ascending)
+          return (
+            new Date(a.dueDate || "9999-12-31") -
+            new Date(b.dueDate || "9999-12-31")
+          );
+        case "importance":
+          // Sort by importance (critical > important > normal > optional)
+          const importanceOrder = {
+            critical: 0,
+            important: 1,
+            normal: 2,
+            optional: 3,
+          };
+          return (
+            (importanceOrder[a.importance || "normal"] || 2) -
+            (importanceOrder[b.importance || "normal"] || 2)
+          );
+        case "priority":
+          // Sort by priority (urgent > high > medium > low)
+          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+          return (
+            (priorityOrder[a.priority || "medium"] || 2) -
+            (priorityOrder[b.priority || "medium"] || 2)
+          );
+        default:
+          return 0;
+      }
+    });
+
+    return filteredTasks;
+  };
+
+  // Function to navigate to calendar view
+  const goToCalendarView = () => {
+    navigate("/calendar");
+  };
+
+  // Handle tab change
+  const handleViewChange = (key) => {
+    setActiveView(key);
+  };
+
+  // Handle adding a new task
+  const handleAddNewTask = () => {
+    setEditingTask(null);
+    setIsModalVisible(true);
+  };
+
   if (loading) {
     return (
       <div
@@ -283,20 +471,124 @@ const TasksPage = () => {
 
   return (
     <>
-      <TaskHeader onAddTask={() => setIsModalVisible(true)} />
-      <Card style={{ margin: "24px" }}>
-        <TaskList
-          tasks={tasks}
-          onToggleCompletion={toggleTaskCompletion}
-          onDeleteTask={handleDeleteTask}
-          onUpdateTask={handleUpdateTask}
-        />
+      <TaskHeader onAddTask={handleAddNewTask} />
+
+      <Card style={{ margin: "24px" }} className="tasks-card">
+        <Tabs
+          activeKey={activeView}
+          onChange={handleViewChange}
+          type="card"
+          size="large"
+          style={{ marginBottom: "16px" }}
+        >
+          <TabPane tab="Classic View" key="classic">
+            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+              <Col xs={24} sm={12} md={8} lg={5}>
+                <Search
+                  placeholder="Search tasks"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  style={{ width: "100%" }}
+                  allowClear
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={5}>
+                <Select
+                  placeholder="Filter by importance"
+                  style={{ width: "100%" }}
+                  value={importanceFilter}
+                  onChange={setImportanceFilter}
+                  allowClear
+                >
+                  <Option value="critical">Critical</Option>
+                  <Option value="important">Important</Option>
+                  <Option value="normal">Normal</Option>
+                  <Option value="optional">Optional</Option>
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={5}>
+                <Select
+                  placeholder="Filter by priority"
+                  style={{ width: "100%" }}
+                  value={priorityFilter}
+                  onChange={setPriorityFilter}
+                  allowClear
+                >
+                  <Option value="urgent">Urgent</Option>
+                  <Option value="high">High</Option>
+                  <Option value="medium">Medium</Option>
+                  <Option value="low">Low</Option>
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={5}>
+                <Select
+                  placeholder="Filter by status"
+                  style={{ width: "100%" }}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  allowClear
+                >
+                  <Option value="todo">To Do</Option>
+                  <Option value="in_progress">In Progress</Option>
+                  <Option value="completed">Completed</Option>
+                  <Option value="archived">Archived</Option>
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <Button
+                  type="primary"
+                  icon={<CalendarOutlined />}
+                  onClick={goToCalendarView}
+                  style={{ width: "100%" }}
+                >
+                  Calendar View
+                </Button>
+              </Col>
+              <Col xs={24}>
+                <Radio.Group
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <Radio.Button value="dueDate">Sort by Due Date</Radio.Button>
+                  <Radio.Button value="importance">
+                    Sort by Importance
+                  </Radio.Button>
+                  <Radio.Button value="priority">Sort by Priority</Radio.Button>
+                </Radio.Group>
+              </Col>
+            </Row>
+
+            <TaskList
+              tasks={getFilteredTasks()}
+              onToggleCompletion={toggleTaskCompletion}
+              onDeleteTask={handleDeleteTask}
+              onUpdateTask={handleUpdateTask}
+              onEditTask={handleOpenEditTask}
+              currentUser={currentUser}
+            />
+          </TabPane>
+
+          <TabPane tab="Todo View" key="todo">
+            <TodoList
+              todos={tasks}
+              loading={loading}
+              onToggleCompletion={toggleTaskCompletion}
+              onDeleteTodo={handleDeleteTask}
+              onEditTodo={handleOpenEditTask}
+              onUpdateSubtask={handleUpdateSubtask}
+              onAddNewTodo={handleAddNewTask}
+              currentUser={currentUser}
+            />
+          </TabPane>
+        </Tabs>
       </Card>
 
       <TaskModal
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={handleTaskModalCancel}
         onSubmit={handleAddTask}
+        editingTask={editingTask}
+        users={users}
       />
     </>
   );

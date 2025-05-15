@@ -65,6 +65,16 @@ export const updateUserProfile = async (userData) => {
   }
 };
 
+export const getAllUsers = async () => {
+  try {
+    const response = await axiosInstance.get("/users");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    throw error;
+  }
+};
+
 export const searchUsers = async (query) => {
   try {
     const response = await axiosInstance.get(`/users/search?query=${query}`);

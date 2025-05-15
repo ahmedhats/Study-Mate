@@ -10,8 +10,19 @@ import {
   Progress,
   Collapse,
   Divider,
+  Tooltip,
+  Avatar,
 } from "antd";
-import { DeleteOutlined, CaretRightOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  CaretRightOutlined,
+  EditOutlined,
+  UserOutlined,
+  TeamOutlined,
+  EyeOutlined,
+  EditTwoTone,
+  CrownTwoTone,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import "./TaskList.css";
 
@@ -26,6 +37,16 @@ const getPriorityColor = (priority) => {
     low: "green",
   };
   return colors[priority] || "default";
+};
+
+const getImportanceColor = (importance) => {
+  const colors = {
+    critical: "red",
+    important: "orange",
+    normal: "blue",
+    optional: "green",
+  };
+  return colors[importance] || "default";
 };
 
 const getStatusColor = (status) => {
@@ -50,6 +71,8 @@ const TaskList = ({
   onToggleCompletion,
   onDeleteTask,
   onUpdateTask,
+  onEditTask,
+  currentUser = {},
 }) => {
   const [expandedTasks, setExpandedTasks] = useState([]);
 
@@ -111,33 +134,95 @@ const TaskList = ({
     return "normal";
   };
 
+  const canEditTask = (task) => {
+    if (!task || !currentUser?._id) return false;
+
+    // User is the creator
+    if (
+      task.createdBy?._id === currentUser._id ||
+      task.createdBy === currentUser._id
+    ) {
+      return true;
+    }
+
+    // Check team members permissions
+    if (task.teamMembers && task.teamMembers.length > 0) {
+      const userTeamMember = task.teamMembers.find(
+        (m) => m.user?._id === currentUser._id || m.user === currentUser._id
+      );
+
+      return (
+        userTeamMember &&
+        (userTeamMember.permissions === "edit" ||
+          userTeamMember.permissions === "admin")
+      );
+    }
+
+    return false;
+  };
+
+  const getPermissionIcon = (permission) => {
+    switch (permission) {
+      case "view":
+        return <EyeOutlined />;
+      case "edit":
+        return <EditTwoTone twoToneColor="#52c41a" />;
+      case "admin":
+        return <CrownTwoTone twoToneColor="#faad14" />;
+      default:
+        return <EyeOutlined />;
+    }
+  };
+
   return (
     <List
       dataSource={Array.isArray(tasks) ? tasks : []}
       renderItem={(task) => {
         const progress = task.progress || calculateProgress(task);
         const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+        const canEdit = canEditTask(task);
 
         return (
           <List.Item
             className="task-list-item"
             actions={[
               <Space>
+                {task.importance && (
+                  <Tag color={getImportanceColor(task.importance)}>
+                    {task.importance.toUpperCase()}
+                  </Tag>
+                )}
                 <Tag color={getPriorityColor(task.priority)}>
                   {(task.priority || "").toUpperCase()}
                 </Tag>
                 <Tag color={getStatusColor(task.status)}>
                   {formatStatus(task.status || "")}
                 </Tag>
-                <Popconfirm
-                  title="Delete this task?"
-                  description="Are you sure you want to delete this task?"
-                  onConfirm={() => onDeleteTask(task._id)}
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <Button type="text" danger icon={<DeleteOutlined />} />
-                </Popconfirm>
+                {canEdit && (
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={() => onEditTask && onEditTask(task)}
+                  />
+                )}
+                {(task.createdBy === currentUser?._id ||
+                  task.createdBy?._id === currentUser?._id ||
+                  task.teamMembers?.some(
+                    (m) =>
+                      (m.user === currentUser?._id ||
+                        m.user?._id === currentUser?._id) &&
+                      m.permissions === "admin"
+                  )) && (
+                  <Popconfirm
+                    title="Delete this task?"
+                    description="Are you sure you want to delete this task?"
+                    onConfirm={() => onDeleteTask(task._id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                )}
               </Space>,
             ]}
           >
@@ -148,6 +233,7 @@ const TaskList = ({
                     <Checkbox
                       checked={task.status === "completed"}
                       onChange={() => onToggleCompletion(task._id)}
+                      disabled={!canEdit}
                     />
                   }
                   title={
@@ -191,6 +277,45 @@ const TaskList = ({
                           />
                         </div>
                       )}
+
+                      {/* Show team members */}
+                      {task.teamMembers && task.teamMembers.length > 0 && (
+                        <div className="task-team-members">
+                          <Tooltip title="Team Members">
+                            <span style={{ marginRight: "5px" }}>
+                              <TeamOutlined />
+                            </span>
+                          </Tooltip>
+                          <Avatar.Group maxCount={3} size="small">
+                            {task.teamMembers.map((member, idx) => (
+                              <Tooltip
+                                key={idx}
+                                title={`${
+                                  member.user?.name || member.name || "User"
+                                } (${member.permissions})`}
+                              >
+                                <Avatar
+                                  icon={getPermissionIcon(member.permissions)}
+                                  style={{
+                                    backgroundColor:
+                                      member.permissions === "admin"
+                                        ? "#faad14"
+                                        : member.permissions === "edit"
+                                        ? "#52c41a"
+                                        : "#1890ff",
+                                  }}
+                                >
+                                  {(
+                                    member.user?.name?.[0] ||
+                                    member.name?.[0] ||
+                                    "U"
+                                  ).toUpperCase()}
+                                </Avatar>
+                              </Tooltip>
+                            ))}
+                          </Avatar.Group>
+                        </div>
+                      )}
                     </div>
                   }
                 />
@@ -213,6 +338,7 @@ const TaskList = ({
                               e.target.checked
                             )
                           }
+                          disabled={!canEdit}
                         >
                           <Text delete={subtask.completed}>
                             {subtask.title}

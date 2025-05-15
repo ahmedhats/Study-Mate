@@ -9,6 +9,8 @@
   z-index: 1000;
   left: 0;
   top: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important; /* Smoother animation */
 }
 
 /* Wrapper to manage flex layout */
@@ -23,6 +25,26 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: thin; /* For Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Custom scrollbar for webkit browsers */
+.sidebar-scrollable-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scrollable-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.sidebar-scrollable-content::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.sidebar-scrollable-content::-webkit-scrollbar-thumb:hover {
+  background: #ccc;
 }
 
 /* --- Sidebar Header --- */
@@ -30,7 +52,7 @@
   padding: 16px;
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, padding 0.3s ease;
 }
 
 .sidebar-header:hover {
@@ -48,11 +70,19 @@
   background-color: #1890ff;
   color: white;
   flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.sidebar-avatar:hover {
+  transform: scale(1.05);
 }
 
 .user-info {
   flex: 1;
   min-width: 0;
+  opacity: 1;
+  transition: opacity 0.3s ease;
 }
 
 .user-name {
@@ -76,11 +106,12 @@
 .sidebar-menu {
   border-right: none !important;
   padding: 8px 0;
+  transition: padding 0.3s ease;
 }
 
 /* General Menu Item Styling (Includes Submenu Titles) */
 .sidebar-menu .ant-menu-item,
-.sidebar-menu .ant-menu-submenu>.ant-menu-submenu-title {
+.sidebar-menu .ant-menu-submenu > .ant-menu-submenu-title {
   margin: 4px 8px !important;
   /* Margin around items */
   padding-left: 16px !important;
@@ -95,6 +126,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .sidebar-menu .ant-menu-item .anticon,
@@ -103,6 +135,7 @@
   /* Space between icon and text */
   font-size: 16px;
   /* Consistent icon size */
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Group Titles */
@@ -110,10 +143,14 @@
   color: #999;
   font-size: 12px;
   padding: 8px 24px !important;
+  transition: padding 0.3s ease, opacity 0.3s ease;
 }
 
 /* Item Hover State */
-.sidebar-menu .ant-menu-item:not(.ant-menu-item-selected):not(.ant-menu-item-disabled):hover,
+.sidebar-menu
+  .ant-menu-item:not(.ant-menu-item-selected):not(
+    .ant-menu-item-disabled
+  ):hover,
 .sidebar-menu .ant-menu-submenu-title:not(.ant-menu-item-disabled):hover {
   background-color: #f9fafb;
   /* Very light grey background on hover */
@@ -149,14 +186,19 @@
 
 /* --- Menu Styles when Collapsed --- */
 .ant-layout-sider-collapsed .sidebar-menu .ant-menu-item,
-.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu>.ant-menu-submenu-title {
+.ant-layout-sider-collapsed
+  .sidebar-menu
+  .ant-menu-submenu
+  > .ant-menu-submenu-title {
   padding: 0 calc(50% - 18px / 2) !important;
   /* Center icon (adjust icon size if needed) */
 }
 
 .ant-layout-sider-collapsed .sidebar-menu .ant-menu-title-content {
-  display: none;
-  /* Hide text */
+  opacity: 0;
+  width: 0;
+  display: inline-block;
+  transition: opacity 0.3s ease, width 0.3s ease;
 }
 
 .ant-layout-sider-collapsed .sidebar-menu .anticon {
@@ -167,19 +209,25 @@
 }
 
 .ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu-arrow {
-  display: none;
-  /* Hide submenu arrows */
+  opacity: 0;
+  width: 0;
+  transition: opacity 0.3s ease, width 0.3s ease;
 }
 
 .ant-layout-sider-collapsed .sidebar-menu .ant-menu-item-group-title {
-  display: none;
-  /* Hide group titles */
+  opacity: 0;
+  height: 0;
+  padding: 0 !important;
+  margin: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, height 0.3s ease, padding 0.3s ease;
 }
 
 /* --- Add Folder Button --- */
 .add-folder-btn {
   margin: 16px;
   width: calc(100% - 32px);
+  transition: opacity 0.3s ease, width 0.3s ease;
 }
 
 .add-folder-btn:hover {
@@ -189,11 +237,19 @@
 
 .add-folder-btn .anticon {
   margin-right: 10px;
+  transition: margin 0.3s ease;
 }
 
 /* Hide Add Folder button when collapsed */
 .ant-layout-sider-collapsed .add-folder-btn {
-  display: none;
+  opacity: 0;
+  width: 0;
+  margin: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, width 0.3s ease, height 0.3s ease,
+    margin 0.3s ease;
 }
 
 /* --- Sidebar Trigger Area --- */
@@ -201,12 +257,21 @@
   padding: 16px;
   border-top: 1px solid #f0f0f0;
   background: #fff;
+  transition: padding 0.3s ease;
 }
 
 .sidebar-trigger-btn {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+  font-size: 14px;
+}
+
+.ant-layout-sider-collapsed .sidebar-trigger-btn {
   justify-content: center;
 }
 
@@ -216,9 +281,14 @@
   /* Light hover background */
 }
 
-/* Styles for trigger when collapsed */
-.ant-layout-sider-collapsed .sidebar-trigger-area {
-  /* No specific styles needed unless you want to change appearance */
+.sidebar-trigger-btn .anticon {
+  font-size: 16px;
+  margin-right: 8px;
+  transition: margin 0.3s ease;
+}
+
+.ant-layout-sider-collapsed .sidebar-trigger-btn .anticon {
+  margin-right: 0;
 }
 
 /* Main content layout adjustments */
@@ -228,7 +298,7 @@
 
 .main-content {
   margin-left: 250px;
-  transition: margin-left 0.2s;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
   min-height: 100vh;
   background: #f5f5f5;
 }
@@ -248,17 +318,48 @@
   margin: 0 auto;
 }
 
+/* Mobile Sidebar Trigger */
+.sidebar-mobile-trigger {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1100;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  width: 40px;
+  height: 40px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-mobile-trigger:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+  transform: scale(1.05);
+}
+
+.sidebar-mobile-trigger:active {
+  transform: scale(0.95);
+}
+
 /* Responsive styles */
+@media (max-width: 991px) {
+  .main-content {
+    margin-left: 80px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .main-content {
-    margin-left: 0;
-    padding-top: 56px;
+    margin-left: 0 !important;
+    padding-top: 60px;
     /* Add space for the sidebar trigger button */
   }
 
   .main-content.collapsed {
-    margin-left: 0;
-    padding-top: 56px;
+    margin-left: 0 !important;
   }
 
   .app-sidebar {
@@ -266,24 +367,38 @@
   }
 
   .sidebar-mobile-trigger {
-    display: block !important;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 1100;
-    background: #fff;
-    border: 1px solid #f0f0f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
   }
 
   .sidebar-mobile-drawer .sidebar-content-wrapper {
-    height: auto;
-    max-height: 80vh;
+    height: 100%;
+    max-height: 100vh;
     overflow-y: auto;
+  }
+
+  .sidebar-mobile-drawer .ant-drawer-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .sidebar-mobile-drawer .ant-drawer-title {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .sidebar-mobile-drawer .sidebar-header {
+    background-color: transparent;
+  }
+
+  .content-wrapper {
+    padding: 16px;
   }
 }
 
-@media (min-width: 769px) {
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 991px) {
   .sidebar-mobile-trigger {
     display: none !important;
   }
@@ -291,4 +406,28 @@
   .sidebar-mobile-drawer {
     display: none !important;
   }
+
+  .sidebar-trigger-area {
+    padding: 12px;
+  }
+
+  .sidebar-header {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-wrapper {
+    padding: 12px;
+  }
+
+  .sidebar-mobile-trigger {
+    top: 12px;
+    left: 12px;
+  }
+}
+
+/* Ensure the drawer animates smoothly */
+.ant-drawer-content-wrapper {
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
 }

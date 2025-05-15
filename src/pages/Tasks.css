@@ -1,0 +1,41 @@
+.tasks-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tasks-card .ant-tabs-nav {
+  margin-bottom: 20px;
+}
+
+.tasks-card .ant-tabs-tab {
+  margin-right: 4px;
+  padding: 10px 20px;
+  font-weight: 500;
+  border-radius: 6px 6px 0 0;
+}
+
+.tasks-card .ant-tabs-tab-active {
+  background-color: #e6f7ff;
+}
+
+.tasks-card .ant-select {
+  width: 100%;
+}
+
+.tasks-card .ant-input-search {
+  width: 100%;
+}
+
+.tasks-card .ant-radio-group {
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .tasks-card {
+    margin: 12px !important;
+  }
+
+  .tasks-card .ant-tabs-tab {
+    padding: 8px 12px;
+  }
+}
