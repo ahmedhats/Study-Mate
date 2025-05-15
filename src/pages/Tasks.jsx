@@ -220,54 +220,77 @@ const TasksPage = () => {
 
   const toggleTaskCompletion = async (taskId) => {
     try {
+      // First find the task in our local state
       const task = tasks.find((t) => t._id === taskId);
-      if (!task) return;
+      if (!task) {
+        console.error(`Task with ID ${taskId} not found`);
+        return;
+      }
 
+      console.log(
+        `Found task to toggle: ${task.title} (${task._id}), current status: ${task.status}`
+      );
+
+      // Determine the new status (toggle between "completed" and previous state)
+      const isCurrentlyCompleted = task.status === "completed";
+      const newStatus = isCurrentlyCompleted ? "todo" : "completed";
+
+      console.log(`Changing status from ${task.status} to ${newStatus}`);
+
+      // Create a copy of the task with updated status
       const updatedTask = {
         ...task,
-        completed: !task.completed,
-        status: !task.completed ? "completed" : "todo",
+        status: newStatus,
       };
 
-      // If the task is being marked as completed, mark all subtasks as completed too
-      if (
-        updatedTask.completed &&
-        updatedTask.subtasks &&
-        updatedTask.subtasks.length > 0
-      ) {
-        updatedTask.subtasks = updatedTask.subtasks.map((st) => ({
-          ...st,
-          completed: true,
-        }));
-        updatedTask.progress = 100;
-      }
-      // If the task is being unchecked, don't change subtasks
-      else if (
-        !updatedTask.completed &&
-        updatedTask.subtasks &&
-        updatedTask.subtasks.length > 0
-      ) {
-        // Recalculate progress
-        const completedSubtasks = updatedTask.subtasks.filter(
-          (st) => st.completed
-        ).length;
-        updatedTask.progress = Math.round(
-          (completedSubtasks / updatedTask.subtasks.length) * 100
-        );
+      // Handle subtasks based on the new main task status
+      if (updatedTask.subtasks && updatedTask.subtasks.length > 0) {
+        if (newStatus === "completed") {
+          // If marking task as completed, mark all subtasks as completed
+          updatedTask.subtasks = updatedTask.subtasks.map((st) => ({
+            ...st,
+            completed: true,
+          }));
+          updatedTask.progress = 100;
+          console.log("Marking all subtasks as completed");
+        } else {
+          // If unmarking task, leave subtasks as they are but recalculate progress
+          const completedSubtasks = updatedTask.subtasks.filter(
+            (st) => st.completed
+          ).length;
+          updatedTask.progress = Math.round(
+            (completedSubtasks / updatedTask.subtasks.length) * 100
+          );
+          console.log(
+            `Keeping subtask states, progress: ${updatedTask.progress}%`
+          );
+        }
       }
 
+      // Update local state immediately for better UI feedback
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t._id === taskId ? updatedTask : t))
+      );
+
       try {
-        await updateTask(taskId, updatedTask);
+        // Send update to server
+        console.log("Sending update to server:", updatedTask);
+        const response = await updateTask(taskId, updatedTask);
         websocketService.sendTaskUpdate(taskId, updatedTask);
-        await fetchTasks();
+        console.log("Server update successful:", response);
+
+        // No need to refresh all tasks - we've already updated our local state
       } catch (err) {
-        // If backend fails, still update locally
-        const newTasks = tasks.map((t) => (t._id === taskId ? updatedTask : t));
-        setTasks(newTasks);
-        localStorage.setItem("tasks_backup", JSON.stringify(newTasks));
-        websocketService.sendTaskUpdate(taskId, updatedTask);
+        console.error("Error updating task on server:", err);
+        // We've already updated the local state, so the UI reflects the change
+        // Also update backup in localStorage
+        localStorage.setItem(
+          "tasks_backup",
+          JSON.stringify(tasks.map((t) => (t._id === taskId ? updatedTask : t)))
+        );
       }
     } catch (error) {
+      console.error("Error in toggleTaskCompletion:", error);
       message.error("Failed to update task");
     }
   };
@@ -335,36 +358,88 @@ const TasksPage = () => {
 
   // Update subtask completion
   const handleUpdateSubtask = (taskId, subtaskIndex, checked) => {
-    const task = tasks.find((t) => t._id === taskId);
-    if (!task || !task.subtasks) return;
+    try {
+      console.log(
+        `Updating subtask ${subtaskIndex} of task ${taskId} to ${
+          checked ? "completed" : "uncompleted"
+        }`
+      );
 
-    const updatedSubtasks = [...task.subtasks];
-    updatedSubtasks[subtaskIndex].completed = checked;
+      // Find the task in our state
+      const task = tasks.find((t) => t._id === taskId);
+      if (!task || !task.subtasks) {
+        console.error(`Task with ID ${taskId} not found or has no subtasks`);
+        return;
+      }
 
-    // Calculate new progress based on subtasks
-    const totalSubtasks = updatedSubtasks.length;
-    const completedSubtasks = updatedSubtasks.filter(
-      (st) => st.completed
-    ).length;
-    const progress = totalSubtasks
-      ? Math.round((completedSubtasks / totalSubtasks) * 100)
-      : 0;
+      // Clone the task and subtasks to avoid mutating state directly
+      const updatedTask = { ...task };
+      const updatedSubtasks = [...task.subtasks];
 
-    // Update task with new subtasks and progress
-    const updatedTask = {
-      ...task,
-      subtasks: updatedSubtasks,
-      progress,
-      // If all subtasks are completed, mark the task as completed
-      status:
-        totalSubtasks && completedSubtasks === totalSubtasks
-          ? "completed"
-          : completedSubtasks > 0
-          ? "in_progress"
-          : task.status,
-    };
+      // Update the specific subtask's completion status
+      updatedSubtasks[subtaskIndex] = {
+        ...updatedSubtasks[subtaskIndex],
+        completed: checked,
+      };
 
-    handleUpdateTask(taskId, updatedTask);
+      // Calculate new progress based on subtasks
+      const totalSubtasks = updatedSubtasks.length;
+      const completedSubtasks = updatedSubtasks.filter(
+        (st) => st.completed
+      ).length;
+      const progress = totalSubtasks
+        ? Math.round((completedSubtasks / totalSubtasks) * 100)
+        : 0;
+
+      console.log(
+        `New progress: ${progress}% (${completedSubtasks}/${totalSubtasks} subtasks completed)`
+      );
+
+      // Determine the appropriate task status based on subtasks
+      let newStatus = task.status;
+
+      if (completedSubtasks === 0) {
+        newStatus = "todo";
+      } else if (completedSubtasks === totalSubtasks) {
+        newStatus = "completed";
+      } else if (completedSubtasks > 0 && completedSubtasks < totalSubtasks) {
+        newStatus = "in_progress";
+      }
+
+      console.log(`Updating task status from ${task.status} to ${newStatus}`);
+
+      // Create the fully updated task object
+      updatedTask.subtasks = updatedSubtasks;
+      updatedTask.progress = progress;
+      updatedTask.status = newStatus;
+
+      // Update UI immediately for better user experience
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t._id === taskId ? updatedTask : t))
+      );
+
+      // Then update on the server
+      try {
+        console.log("Sending updated task to server:", updatedTask);
+        updateTask(taskId, updatedTask)
+          .then((response) =>
+            console.log("Server update successful:", response)
+          )
+          .catch((error) => console.error("Server update failed:", error));
+
+        websocketService.sendTaskUpdate(taskId, updatedTask);
+      } catch (error) {
+        console.error("Error updating task on server:", error);
+        // Update local storage for offline support
+        localStorage.setItem(
+          "tasks_backup",
+          JSON.stringify(tasks.map((t) => (t._id === taskId ? updatedTask : t)))
+        );
+      }
+    } catch (error) {
+      console.error("Error in handleUpdateSubtask:", error);
+      message.error("Failed to update subtask");
+    }
   };
 
   // Filter and sort tasks

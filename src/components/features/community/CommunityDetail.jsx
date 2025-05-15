@@ -14,6 +14,9 @@ import {
   Divider,
   Modal,
   Statistic,
+  Progress,
+  Tooltip,
+  message,
 } from "antd";
 import {
   TeamOutlined,
@@ -24,6 +27,10 @@ import {
   BookOutlined,
   BranchesOutlined,
   PlusOutlined,
+  CrownOutlined,
+  UserOutlined,
+  TrophyOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import CommunityChat from "./CommunityChat";
 import StudySessionList from "./StudySessionList";
@@ -31,6 +38,8 @@ import StudySessionModal from "./StudySessionModal";
 import {
   getCommunityDetails,
   joinCommunitySession,
+  joinCommunity,
+  toggleFavoriteCommunity,
 } from "../../../services/api/communityService";
 
 const { TabPane } = Tabs;
@@ -43,6 +52,8 @@ const CommunityDetail = ({ communityId }) => {
   const [activeTab, setActiveTab] = useState("chat");
   const [studySessionModalVisible, setStudySessionModalVisible] =
     useState(false);
+  const [joiningCommunity, setJoiningCommunity] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     if (communityId) {
@@ -94,6 +105,48 @@ const CommunityDetail = ({ communityId }) => {
     }
   };
 
+  const handleJoinCommunity = async () => {
+    setJoiningCommunity(true);
+    try {
+      const response = await joinCommunity(communityId);
+      if (response.success) {
+        // Update community state to reflect the user has joined
+        setCommunity((prev) => ({
+          ...prev,
+          isMember: true,
+          members: prev.members + 1,
+        }));
+        message.success("Successfully joined the community!");
+      } else {
+        message.error(response.message || "Failed to join community");
+      }
+    } catch (error) {
+      console.error("Error joining community:", error);
+      message.error("Failed to join community. Please try again later.");
+    } finally {
+      setJoiningCommunity(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    setFavoriteLoading(true);
+    try {
+      const response = await toggleFavoriteCommunity(communityId);
+      if (response.success) {
+        // Toggle the favorite status in the UI
+        setCommunity((prev) => ({
+          ...prev,
+          isFavorite: !prev.isFavorite,
+        }));
+      }
+    } catch (error) {
+      console.error("Error toggling favorite status:", error);
+      message.error("Failed to update favorite status");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "100px 0" }}>
@@ -110,6 +163,22 @@ const CommunityDetail = ({ communityId }) => {
       </div>
     );
   }
+
+  // Calculate community engagement percentage
+  const calculateEngagement = () => {
+    // This is a simplified calculation - in a real app you might use more complex metrics
+    const totalPossibleEngagement = community.members * 10; // Assuming 10 points per member is max engagement
+    const currentEngagement =
+      (community.studySessions?.length || 0) * 5 +
+      (community.membersList?.length || 0) * 2;
+
+    return Math.min(
+      Math.round((currentEngagement / totalPossibleEngagement) * 100),
+      100
+    );
+  };
+
+  const engagementPercent = calculateEngagement();
 
   return (
     <div>
@@ -147,29 +216,175 @@ const CommunityDetail = ({ communityId }) => {
           </Col>
           <Col xs={24} md={16}>
             <Space direction="vertical" size="large" style={{ width: "100%" }}>
-              <Row gutter={[16, 16]}>
-                <Col xs={8}>
-                  <Statistic
-                    title="Members"
-                    value={community.members}
-                    prefix={<TeamOutlined />}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
+                <Row gutter={[16, 16]} style={{ flex: 1 }}>
+                  <Col xs={8}>
+                    <Statistic
+                      title="Members"
+                      value={community.members}
+                      prefix={<TeamOutlined />}
+                    />
+                  </Col>
+                  <Col xs={8}>
+                    <Statistic
+                      title="Study Sessions"
+                      value={community.studySessions?.length || 0}
+                      prefix={<CalendarOutlined />}
+                    />
+                  </Col>
+                  <Col xs={8}>
+                    <Statistic
+                      title="Topics"
+                      value={community.tags?.length || 0}
+                      prefix={<BookOutlined />}
+                    />
+                  </Col>
+                </Row>
+                <Space>
+                  <Button
+                    type={community.isMember ? "default" : "primary"}
+                    icon={<UserAddOutlined />}
+                    onClick={handleJoinCommunity}
+                    loading={joiningCommunity}
+                    disabled={community.isMember}
+                  >
+                    {community.isMember ? "Joined" : "Join Community"}
+                  </Button>
+                  <Button
+                    type="text"
+                    icon={
+                      community.isFavorite ? (
+                        <StarFilled style={{ color: "#faad14" }} />
+                      ) : (
+                        <StarOutlined />
+                      )
+                    }
+                    onClick={handleToggleFavorite}
+                    loading={favoriteLoading}
                   />
-                </Col>
-                <Col xs={8}>
-                  <Statistic
-                    title="Study Sessions"
-                    value={community.studySessions?.length || 0}
-                    prefix={<CalendarOutlined />}
-                  />
-                </Col>
-                <Col xs={8}>
-                  <Statistic
-                    title="Topics"
-                    value={community.tags?.length || 0}
-                    prefix={<BookOutlined />}
-                  />
-                </Col>
-              </Row>
+                </Space>
+              </div>
+
+              {/* Progress Bar for Community Engagement */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text strong>Community Engagement</Text>
+                  <Text>{engagementPercent}%</Text>
+                </div>
+                <Progress
+                  percent={engagementPercent}
+                  status={
+                    engagementPercent > 80
+                      ? "success"
+                      : engagementPercent > 50
+                      ? "active"
+                      : "normal"
+                  }
+                  strokeColor={
+                    engagementPercent > 80
+                      ? "#52c41a"
+                      : engagementPercent > 50
+                      ? "#1890ff"
+                      : engagementPercent > 30
+                      ? "#faad14"
+                      : "#ff4d4f"
+                  }
+                />
+              </div>
+
+              {/* Team Members and Admin Icons */}
+              <div>
+                <Text strong style={{ marginBottom: 8, display: "block" }}>
+                  Team Members:
+                </Text>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {community.membersList
+                    ?.filter((member) => member.role === "admin")
+                    .map((admin) => (
+                      <Tooltip key={admin.id} title={`${admin.name} (Admin)`}>
+                        <Avatar
+                          src={admin.avatar}
+                          style={{
+                            backgroundColor: "#f56a00",
+                            cursor: "pointer",
+                          }}
+                          icon={!admin.avatar && <UserOutlined />}
+                        >
+                          {admin.name[0].toUpperCase()}
+                        </Avatar>
+                        <CrownOutlined
+                          style={{
+                            color: "gold",
+                            position: "relative",
+                            top: -10,
+                            left: -8,
+                          }}
+                        />
+                      </Tooltip>
+                    ))}
+                  {community.membersList
+                    ?.filter((member) => member.role === "moderator")
+                    .map((mod) => (
+                      <Tooltip key={mod.id} title={`${mod.name} (Moderator)`}>
+                        <Avatar
+                          src={mod.avatar}
+                          style={{
+                            backgroundColor: "#1890ff",
+                            cursor: "pointer",
+                          }}
+                          icon={!mod.avatar && <UserOutlined />}
+                        >
+                          {mod.name[0].toUpperCase()}
+                        </Avatar>
+                        <TrophyOutlined
+                          style={{
+                            color: "#1890ff",
+                            position: "relative",
+                            top: -10,
+                            left: -8,
+                          }}
+                        />
+                      </Tooltip>
+                    ))}
+                  {community.membersList
+                    ?.filter((member) => !member.role)
+                    .slice(0, 5)
+                    .map((member) => (
+                      <Tooltip key={member.id} title={member.name}>
+                        <Avatar
+                          src={member.avatar}
+                          style={{ cursor: "pointer" }}
+                          icon={!member.avatar && <UserOutlined />}
+                        >
+                          {member.name[0].toUpperCase()}
+                        </Avatar>
+                      </Tooltip>
+                    ))}
+                  {community.membersList &&
+                    community.membersList.filter((member) => !member.role)
+                      .length > 5 && (
+                      <Avatar
+                        style={{ backgroundColor: "#f0f2f5", color: "#666" }}
+                      >
+                        +
+                        {community.membersList.filter((member) => !member.role)
+                          .length - 5}
+                      </Avatar>
+                    )}
+                </div>
+              </div>
 
               <Paragraph>{community.description}</Paragraph>
 
@@ -200,6 +415,7 @@ const CommunityDetail = ({ communityId }) => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleCreateStudySession}
+                disabled={!community.isMember}
               >
                 Create Study Session
               </Button>
@@ -218,6 +434,8 @@ const CommunityDetail = ({ communityId }) => {
             <CommunityChat
               communityId={communityId}
               communityName={community.name}
+              isMember={community.isMember}
+              onJoinCommunity={handleJoinCommunity}
             />
           </TabPane>
           <TabPane
@@ -244,6 +462,7 @@ const CommunityDetail = ({ communityId }) => {
               sessions={community.studySessions || []}
               loading={studySessionsLoading}
               onJoinSession={handleJoinSession}
+              isMember={community.isMember}
             />
           </TabPane>
           <TabPane

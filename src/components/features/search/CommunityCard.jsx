@@ -7,12 +7,20 @@ import {
   StarOutlined,
   StarFilled,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
 
 const CommunityCard = ({ community, onJoin, onFavorite }) => {
   const { id, name, description, members, tags, image, isMember, isFavorite } =
     community;
+
+  const navigate = useNavigate();
+
+  const handleViewDetails = (e) => {
+    e.stopPropagation();
+    navigate(`/community/${id}`);
+  };
 
   return (
     <Card
@@ -53,17 +61,11 @@ const CommunityCard = ({ community, onJoin, onFavorite }) => {
             <StarOutlined onClick={() => onFavorite(id)} />
           )}
         </Tooltip>,
-        <Button
-          type="link"
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            window.location.href = `/community/${id}`;
-          }}
-        >
+        <Button type="link" size="small" onClick={handleViewDetails}>
           View Details
         </Button>,
       ]}
+      onClick={handleViewDetails}
     >
       <Title level={4}>{name}</Title>
       <Paragraph ellipsis={{ rows: 2 }}>{description}</Paragraph>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Checkbox,
@@ -37,16 +37,35 @@ const Todo = ({
   currentUser,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [localProgress, setLocalProgress] = useState(0);
+
+  // Initialize local progress based on todo props
+  useEffect(() => {
+    if (todo) {
+      setLocalProgress(todo.progress || calculateProgress());
+    }
+  }, [todo]);
 
   // Handle toggling the expanded state
   const toggleExpand = () => {
     setExpanded(!expanded);
   };
 
-  // Handle subtask toggle
+  // Handle subtask toggle with improved debugging
   const handleSubtaskToggle = (subtaskIndex, checked) => {
+    console.log(
+      `Toggle subtask ${subtaskIndex} to ${checked ? "checked" : "unchecked"}`
+    );
     if (onUpdateSubtask) {
       onUpdateSubtask(todo._id, subtaskIndex, checked);
+    }
+  };
+
+  // Handle main task toggle with improved debugging
+  const handleTaskToggle = () => {
+    console.log(`Toggling task ${todo._id} from ${todo.status} status`);
+    if (onToggleCompletion) {
+      onToggleCompletion(todo._id);
     }
   };
 
@@ -150,7 +169,7 @@ const Todo = ({
     );
   };
 
-  const progress = todo.progress || calculateProgress();
+  const progress = localProgress || todo.progress || calculateProgress();
   const hasSubtasks = todo.subtasks && todo.subtasks.length > 0;
   const canEdit = canEditTask();
   const canDelete = canDeleteTask();
@@ -169,8 +188,7 @@ const Todo = ({
         <div className="todo-checkbox-title">
           <Checkbox
             checked={todo.status === "completed"}
-            onChange={() => onToggleCompletion && onToggleCompletion(todo._id)}
-            disabled={!canEdit}
+            onChange={handleTaskToggle}
             className="todo-checkbox"
           />
           <div className="todo-title-container">
@@ -281,7 +299,6 @@ const Todo = ({
                 <Checkbox
                   checked={subtask.completed}
                   onChange={(e) => handleSubtaskToggle(index, e.target.checked)}
-                  disabled={!canEdit}
                 >
                   <Text delete={subtask.completed}>{subtask.title}</Text>
                 </Checkbox>

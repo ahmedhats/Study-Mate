@@ -12,6 +12,7 @@ import {
   Progress,
   Empty,
   Spin,
+  Alert,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -22,16 +23,56 @@ import {
   LockOutlined,
   UnlockOutlined,
   CalendarOutlined,
+  InfoCircleOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
 
-const StudySessionList = ({ sessions, loading, onJoinSession }) => {
+const StudySessionList = ({
+  sessions,
+  loading,
+  onJoinSession,
+  isMember = false,
+  onJoinCommunity,
+}) => {
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "50px 0" }}>
         <Spin size="large" />
         <p style={{ marginTop: 16 }}>Loading study sessions...</p>
+      </div>
+    );
+  }
+
+  if (!isMember) {
+    return (
+      <div>
+        <Alert
+          message="Join the community to participate in study sessions"
+          description="You need to be a member of this community to join or create study sessions."
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+          style={{ marginBottom: 16 }}
+          action={
+            <Button size="small" type="primary" icon={<UserAddOutlined />}>
+              Join Community
+            </Button>
+          }
+        />
+        {!sessions || sessions.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No active study sessions"
+            style={{ margin: "50px 0" }}
+          />
+        ) : (
+          <List
+            dataSource={sessions}
+            renderItem={(session) => renderSessionItem(session, true)}
+          />
+        )}
       </div>
     );
   }
@@ -98,136 +139,150 @@ const StudySessionList = ({ sessions, loading, onJoinSession }) => {
     return Math.min(100, Math.round((current / max) * 100));
   };
 
+  // Render a session item
+  const renderSessionItem = (session, readOnly = false) => {
+    const statusColor = getStatusColor(session);
+    const statusText = getStatusText(session);
+    const timeDisplay = getTimeDisplay(session);
+    const capacityPercentage = getCapacityPercentage(
+      session.participants.length,
+      session.maxParticipants
+    );
+    const isFull = session.participants.length >= session.maxParticipants;
+    const isActive = statusText === "Active";
+    const isEnded = statusText === "Ended";
+
+    return (
+      <List.Item>
+        <Card
+          style={{ width: "100%" }}
+          actions={
+            readOnly
+              ? []
+              : [
+                  <Button
+                    type="primary"
+                    icon={<RightOutlined />}
+                    disabled={isEnded || isFull || !isMember}
+                    onClick={() => onJoinSession(session.id)}
+                  >
+                    {isEnded
+                      ? "View Summary"
+                      : isFull
+                      ? "Full"
+                      : "Join Session"}
+                  </Button>,
+                ]
+          }
+        >
+          <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            <Space
+              align="center"
+              style={{ width: "100%", justifyContent: "space-between" }}
+            >
+              <Badge
+                color={statusColor}
+                text={<Text strong>{session.title}</Text>}
+              />
+              <Tag color={statusColor}>{statusText}</Tag>
+            </Space>
+
+            <Space>
+              <BulbOutlined />
+              <Text>{session.topic}</Text>
+              {session.isPublic ? (
+                <Tooltip title="Public session">
+                  <UnlockOutlined style={{ color: "#52c41a" }} />
+                </Tooltip>
+              ) : (
+                <Tooltip title="Private session">
+                  <LockOutlined style={{ color: "#faad14" }} />
+                </Tooltip>
+              )}
+            </Space>
+
+            <Space>
+              <ClockCircleOutlined />
+              <Text>{timeDisplay}</Text>
+            </Space>
+
+            <Space>
+              <CalendarOutlined />
+              <Text>
+                {new Date(session.startTime).toLocaleString()} -{" "}
+                {new Date(session.endTime).toLocaleTimeString()}
+              </Text>
+            </Space>
+
+            {session.description && (
+              <Text
+                type="secondary"
+                ellipsis={{ rows: 2, expandable: true, symbol: "more" }}
+              >
+                {session.description}
+              </Text>
+            )}
+
+            <div>
+              <Space
+                align="center"
+                style={{ width: "100%", justifyContent: "space-between" }}
+              >
+                <Text>
+                  <TeamOutlined /> {session.participants.length}/
+                  {session.maxParticipants} participants
+                </Text>
+                <Tag
+                  color={
+                    session.difficulty === "beginner"
+                      ? "green"
+                      : session.difficulty === "intermediate"
+                      ? "blue"
+                      : "purple"
+                  }
+                >
+                  {session.difficulty.charAt(0).toUpperCase() +
+                    session.difficulty.slice(1)}
+                </Tag>
+              </Space>
+              <Progress
+                percent={capacityPercentage}
+                size="small"
+                status={isFull ? "exception" : isActive ? "active" : "normal"}
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </div>
+
+            {session.participants.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: 4 }}
+                >
+                  Participants:
+                </Text>
+                <Avatar.Group maxCount={5}>
+                  {session.participants.map((user) => (
+                    <Tooltip key={user.id} title={user.name}>
+                      <Avatar src={user.avatar} size="small">
+                        {user.name.charAt(0)}
+                      </Avatar>
+                    </Tooltip>
+                  ))}
+                </Avatar.Group>
+              </div>
+            )}
+          </Space>
+        </Card>
+      </List.Item>
+    );
+  };
+
   return (
     <List
       dataSource={sessions}
-      renderItem={(session) => {
-        const statusColor = getStatusColor(session);
-        const statusText = getStatusText(session);
-        const timeDisplay = getTimeDisplay(session);
-        const capacityPercentage = getCapacityPercentage(
-          session.participants.length,
-          session.maxParticipants
-        );
-        const isFull = session.participants.length >= session.maxParticipants;
-        const isActive = statusText === "Active";
-        const isEnded = statusText === "Ended";
-
-        return (
-          <List.Item>
-            <Card
-              style={{ width: "100%" }}
-              actions={[
-                <Button
-                  type="primary"
-                  icon={<RightOutlined />}
-                  disabled={isEnded || isFull}
-                  onClick={() => onJoinSession(session.id)}
-                >
-                  {isEnded ? "View Summary" : isFull ? "Full" : "Join Session"}
-                </Button>,
-              ]}
-            >
-              <Space
-                direction="vertical"
-                size="small"
-                style={{ width: "100%" }}
-              >
-                <Space
-                  align="center"
-                  style={{ width: "100%", justifyContent: "space-between" }}
-                >
-                  <Badge
-                    color={statusColor}
-                    text={<Text strong>{session.title}</Text>}
-                  />
-                  <Tag color={statusColor}>{statusText}</Tag>
-                </Space>
-
-                <Space>
-                  <BulbOutlined />
-                  <Text>{session.topic}</Text>
-                  {session.isPublic ? (
-                    <Tooltip title="Public session">
-                      <UnlockOutlined style={{ color: "#52c41a" }} />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="Private session">
-                      <LockOutlined style={{ color: "#faad14" }} />
-                    </Tooltip>
-                  )}
-                </Space>
-
-                <Space>
-                  <ClockCircleOutlined />
-                  <Text>{timeDisplay}</Text>
-                </Space>
-
-                <Space>
-                  <CalendarOutlined />
-                  <Text>
-                    {new Date(session.startTime).toLocaleString()} -{" "}
-                    {new Date(session.endTime).toLocaleTimeString()}
-                  </Text>
-                </Space>
-
-                <div>
-                  <Space
-                    align="center"
-                    style={{ width: "100%", justifyContent: "space-between" }}
-                  >
-                    <Text>
-                      <TeamOutlined /> {session.participants.length}/
-                      {session.maxParticipants} participants
-                    </Text>
-                    <Tag
-                      color={
-                        session.difficulty === "beginner"
-                          ? "green"
-                          : session.difficulty === "intermediate"
-                          ? "blue"
-                          : "purple"
-                      }
-                    >
-                      {session.difficulty.charAt(0).toUpperCase() +
-                        session.difficulty.slice(1)}
-                    </Tag>
-                  </Space>
-                  <Progress
-                    percent={capacityPercentage}
-                    size="small"
-                    status={
-                      isFull ? "exception" : isActive ? "active" : "normal"
-                    }
-                    showInfo={false}
-                    style={{ marginTop: 8 }}
-                  />
-                </div>
-
-                {session.participants.length > 0 && (
-                  <div style={{ marginTop: 8 }}>
-                    <Text
-                      type="secondary"
-                      style={{ display: "block", marginBottom: 4 }}
-                    >
-                      Participants:
-                    </Text>
-                    <Avatar.Group maxCount={5}>
-                      {session.participants.map((user) => (
-                        <Tooltip key={user.id} title={user.name}>
-                          <Avatar src={user.avatar} size="small">
-                            {user.name.charAt(0)}
-                          </Avatar>
-                        </Tooltip>
-                      ))}
-                    </Avatar.Group>
-                  </div>
-                )}
-              </Space>
-            </Card>
-          </List.Item>
-        );
-      }}
+      renderItem={(session) => renderSessionItem(session)}
     />
   );
 };

@@ -13,6 +13,8 @@ import {
   Tooltip,
   Spin,
   Empty,
+  message as antMessage,
+  Alert,
 } from "antd";
 import {
   SendOutlined,
@@ -21,6 +23,8 @@ import {
   CalendarOutlined,
   TeamOutlined,
   BulbOutlined,
+  UserOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import {
   getCommunityChat,
@@ -30,15 +34,59 @@ import {
 const { Text, Title } = Typography;
 const { TextArea } = Input;
 
-const CommunityChat = ({ communityId, communityName }) => {
+// Helper function to generate an avatar color based on name
+const getAvatarColor = (name) => {
+  if (!name) return "#1890ff";
+
+  // Simple hash function for the name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Convert hash to a color
+  const colors = [
+    "#f56a00",
+    "#7265e6",
+    "#ffbf00",
+    "#00a2ae",
+    "#f56a00",
+    "#1890ff",
+    "#52c41a",
+    "#722ed1",
+    "#eb2f96",
+    "#faad14",
+  ];
+
+  return colors[Math.abs(hash) % colors.length];
+};
+
+const CommunityChat = ({
+  communityId,
+  communityName,
+  isMember = false,
+  onJoinCommunity,
+}) => {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [studySessions, setStudySessions] = useState([]);
   const messagesEndRef = useRef(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
+    // Get current user from localStorage
+    try {
+      const userData = localStorage.getItem("userData");
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        setCurrentUser(parsed.user || parsed);
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
+
     if (communityId) {
       fetchCommunityChat();
     }
@@ -58,6 +106,7 @@ const CommunityChat = ({ communityId, communityName }) => {
       }
     } catch (error) {
       console.error("Error fetching community chat:", error);
+      antMessage.error("Failed to load chat messages");
     } finally {
       setLoading(false);
     }
@@ -69,15 +118,19 @@ const CommunityChat = ({ communityId, communityName }) => {
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
+    if (!isMember) {
+      antMessage.error("You must join the community to send messages");
+      return;
+    }
 
     // Optimistically add message to UI
     const tempMessage = {
       id: `temp-${Date.now()}`,
       content: message,
       sender: {
-        id: "currentUser", // This would be the actual user ID in a real app
-        name: "You",
-        avatar: null,
+        id: "currentUser",
+        name: currentUser?.name || "You",
+        avatar: currentUser?.avatar || null,
       },
       timestamp: new Date().toISOString(),
       type: "message",
@@ -108,6 +161,7 @@ const CommunityChat = ({ communityId, communityName }) => {
               : msg
           )
         );
+        antMessage.error("Failed to send message");
       }
     } catch (error) {
       console.error("Error sending community message:", error);
@@ -119,6 +173,7 @@ const CommunityChat = ({ communityId, communityName }) => {
             : msg
         )
       );
+      antMessage.error("Error sending message");
     } finally {
       setSending(false);
     }
@@ -165,6 +220,11 @@ const CommunityChat = ({ communityId, communityName }) => {
 
     // Regular message
     const isCurrentUser = item.sender.id === "currentUser";
+    const avatarColor = getAvatarColor(item.sender.name);
+    const senderInitial = item.sender.name
+      ? item.sender.name[0].toUpperCase()
+      : "?";
+
     return (
       <List.Item
         style={{
@@ -175,12 +235,14 @@ const CommunityChat = ({ communityId, communityName }) => {
       >
         <Avatar
           src={item.sender.avatar}
+          icon={!item.sender.avatar && <UserOutlined />}
           style={{
             marginRight: isCurrentUser ? 0 : 12,
             marginLeft: isCurrentUser ? 12 : 0,
+            backgroundColor: !item.sender.avatar ? avatarColor : undefined,
           }}
         >
-          {item.sender.name[0].toUpperCase()}
+          {!item.sender.avatar && senderInitial}
         </Avatar>
         <div
           style={{
@@ -197,6 +259,7 @@ const CommunityChat = ({ communityId, communityName }) => {
               padding: "8px 12px",
               marginTop: 4,
               position: "relative",
+              wordBreak: "break-word",
             }}
           >
             {item.content}
@@ -260,6 +323,28 @@ const CommunityChat = ({ communityId, communityName }) => {
         flexDirection: "column",
       }}
     >
+      {!isMember && (
+        <Alert
+          message="Join the community to participate in the chat"
+          description="You can view messages, but you need to join this community to send messages and participate in discussions."
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+          style={{ margin: "12px" }}
+          action={
+            <Button
+              size="small"
+              type="primary"
+              icon={<UserAddOutlined />}
+              onClick={onJoinCommunity}
+            >
+              {" "}
+              Join Community{" "}
+            </Button>
+          }
+        />
+      )}
+
       {loading ? (
         <div
           style={{
@@ -271,10 +356,14 @@ const CommunityChat = ({ communityId, communityName }) => {
         >
           <Spin size="large" />
         </div>
-      ) : messages.length > 0 ? (
+      ) : messages.length > 0 || studySessions.length > 0 ? (
         <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
           <List
-            dataSource={[...messages, ...studySessions]}
+            dataSource={[...messages, ...studySessions].sort(
+              (a, b) =>
+                new Date(a.timestamp || a.startTime) -
+                new Date(b.timestamp || b.startTime)
+            )}
             renderItem={renderMessageItem}
             split={false}
           />
@@ -282,7 +371,7 @@ const CommunityChat = ({ communityId, communityName }) => {
         </div>
       ) : (
         <Empty
-          description="No messages yet"
+          description="No messages yet. Be the first to start a conversation!"
           style={{
             flex: 1,
             display: "flex",
@@ -297,15 +386,17 @@ const CommunityChat = ({ communityId, communityName }) => {
           <TextArea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={
+              isMember ? "Type a message..." : "Join community to send messages"
+            }
             autoSize={{ minRows: 1, maxRows: 4 }}
             onPressEnter={(e) => {
-              if (!e.shiftKey) {
+              if (!e.shiftKey && isMember) {
                 e.preventDefault();
                 handleSendMessage();
               }
             }}
-            disabled={sending}
+            disabled={sending || !isMember}
             style={{ flex: 1 }}
           />
           <Button
@@ -313,11 +404,17 @@ const CommunityChat = ({ communityId, communityName }) => {
             icon={<SendOutlined />}
             onClick={handleSendMessage}
             loading={sending}
+            disabled={!isMember}
             style={{ marginLeft: 8, alignSelf: "flex-end" }}
           />
         </div>
         <div style={{ marginTop: 8, textAlign: "right" }}>
-          <Button type="link" icon={<CalendarOutlined />} size="small">
+          <Button
+            type="link"
+            icon={<CalendarOutlined />}
+            size="small"
+            disabled={!isMember}
+          >
             Create Study Session
           </Button>
         </div>

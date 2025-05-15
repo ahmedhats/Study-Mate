@@ -6,39 +6,39 @@ const mockUsers = [
     id: "user1",
     name: "John Doe",
     email: "john@example.com",
-    avatar: "https://xsgames.co/randomusers/avatar.php?g=male",
+    avatar: "https://i.pravatar.cc/150?u=john123",
     role: "admin",
   },
   {
     id: "user2",
     name: "Jane Smith",
     email: "jane@example.com",
-    avatar: "https://xsgames.co/randomusers/avatar.php?g=female",
+    avatar: "https://i.pravatar.cc/150?u=jane456",
     role: "moderator",
   },
   {
     id: "user3",
     name: "Alice Johnson",
     email: "alice@example.com",
-    avatar: "https://xsgames.co/randomusers/avatar.php?g=female",
+    avatar: "https://i.pravatar.cc/150?u=alice789",
   },
   {
     id: "user4",
     name: "Bob Wilson",
     email: "bob@example.com",
-    avatar: "https://xsgames.co/randomusers/avatar.php?g=male",
+    avatar: "https://i.pravatar.cc/150?u=bob012",
   },
   {
     id: "user5",
     name: "Emily Davis",
     email: "emily@example.com",
-    avatar: "https://xsgames.co/randomusers/avatar.php?g=female",
+    avatar: "https://i.pravatar.cc/150?u=emily345",
   },
   {
     id: "currentUser",
     name: "You",
     email: "currentuser@example.com",
-    avatar: null,
+    avatar: "https://i.pravatar.cc/150?u=currentuser678",
   },
 ];
 
@@ -505,14 +505,35 @@ export const sendCommunityMessage = async (communityId, content) => {
     // const response = await api.post(`/communities/${communityId}/chat`, { content });
     // return response.data;
 
+    // Get current user data from localStorage
+    let currentUserData = null;
+    try {
+      const userData = localStorage.getItem("userData");
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        // Support both data structures (with or without user object)
+        currentUserData = parsed.user || parsed;
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
+
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // Find the current user in mockUsers or use a default if not found
+    const currentUser = mockUsers.find((u) => u.id === "currentUser");
+
+    // Update currentUser name if available from localStorage
+    if (currentUserData && currentUserData.name) {
+      currentUser.name = currentUserData.name;
+    }
 
     // Create new message
     const newMessage = {
       id: `msg-${Date.now()}`,
       content,
-      sender: mockUsers[5], // Current user
+      sender: currentUser,
       timestamp: new Date().toISOString(),
       type: "message",
     };
@@ -535,6 +556,157 @@ export const sendCommunityMessage = async (communityId, content) => {
       success: false,
       data: null,
       message: error.message || "Failed to send message",
+    };
+  }
+};
+
+/**
+ * Join a study session in a community
+ * @param {string} communityId - The ID of the community
+ * @param {string} sessionId - The ID of the study session to join
+ * @returns {Promise} Promise object that resolves to the updated study session
+ */
+export const joinCommunitySession = async (communityId, sessionId) => {
+  try {
+    // In a real app, you would make an API call
+    // const response = await api.post(`/communities/${communityId}/sessions/${sessionId}/join`);
+    // return response.data;
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    // Find the community and session in mock data
+    const community = mockCommunities.find((c) => c.id === communityId);
+    if (!community) {
+      return {
+        success: false,
+        data: null,
+        message: "Community not found",
+      };
+    }
+
+    const sessionIndex = community.studySessions.findIndex(
+      (s) => s.id === sessionId
+    );
+    if (sessionIndex === -1) {
+      return {
+        success: false,
+        data: null,
+        message: "Study session not found",
+      };
+    }
+
+    // Check if session is full
+    const session = community.studySessions[sessionIndex];
+    if (session.participants.length >= session.maxParticipants) {
+      return {
+        success: false,
+        data: null,
+        message: "Study session is full",
+      };
+    }
+
+    // Add current user to participants
+    const currentUser = mockUsers.find((u) => u.id === "currentUser");
+    if (!session.participants.some((p) => p.id === currentUser.id)) {
+      session.participants.push(currentUser);
+    }
+
+    // Update the session in mock data
+    community.studySessions[sessionIndex] = session;
+
+    return {
+      success: true,
+      data: session,
+      message: "Successfully joined the study session",
+    };
+  } catch (error) {
+    console.error("Error joining study session:", error);
+    return {
+      success: false,
+      data: null,
+      message: error.message || "Failed to join study session",
+    };
+  }
+};
+
+/**
+ * Create a new study session in a community
+ * @param {Object} sessionData - The study session data
+ * @param {string} sessionData.communityId - The ID of the community
+ * @param {string} sessionData.title - The title of the study session
+ * @param {string} sessionData.topic - The topic of the study session
+ * @param {string} sessionData.startTime - The start time of the study session
+ * @param {string} sessionData.endTime - The end time of the study session
+ * @param {number} sessionData.maxParticipants - The maximum number of participants
+ * @param {string} sessionData.difficulty - The difficulty level
+ * @param {string} sessionData.description - The description of the study session
+ * @param {string} [sessionData.prerequisites] - Optional prerequisites for the session
+ * @param {boolean} sessionData.isPublic - Whether the session is public
+ * @returns {Promise} Promise object that resolves to the created study session
+ */
+export const createCommunityStudySession = async (sessionData) => {
+  try {
+    // In a real app, you would make an API call
+    // const response = await api.post(`/communities/${sessionData.communityId}/study-sessions`, sessionData);
+    // return response.data;
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const { communityId } = sessionData;
+
+    // Find the community in mock data
+    const community = mockCommunities.find((c) => c.id === communityId);
+    if (!community) {
+      return {
+        success: false,
+        data: null,
+        message: "Community not found",
+      };
+    }
+
+    // Create new study session
+    const newSession = {
+      id: `session-${Date.now()}`,
+      ...sessionData,
+      participants: [mockUsers.find((u) => u.id === "currentUser")], // Creator is first participant
+    };
+
+    // Add to mock data
+    if (!community.studySessions) {
+      community.studySessions = [];
+    }
+    community.studySessions.push(newSession);
+
+    // Also add to chat data as an announcement
+    if (!mockCommunityChats[communityId]) {
+      mockCommunityChats[communityId] = { messages: [], studySessions: [] };
+    }
+
+    const sessionAnnouncement = {
+      id: newSession.id,
+      title: newSession.title,
+      topic: newSession.topic,
+      startTime: newSession.startTime,
+      endTime: newSession.endTime,
+      participants: 1,
+      type: "study_session",
+    };
+
+    mockCommunityChats[communityId].studySessions.push(sessionAnnouncement);
+
+    return {
+      success: true,
+      data: newSession,
+      message: "Study session created successfully",
+    };
+  } catch (error) {
+    console.error("Error creating study session:", error);
+    return {
+      success: false,
+      data: null,
+      message: error.message || "Failed to create study session",
     };
   }
 };

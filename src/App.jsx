@@ -31,6 +31,9 @@ const Login = React.lazy(() => import("./pages/auth/Login"));
 const Signup = React.lazy(() => import("./pages/auth/Signup"));
 const ProfileSetup = React.lazy(() => import("./pages/auth/profilesetup"));
 const VerifyEmail = React.lazy(() => import("./pages/auth/VerifyEmail"));
+const CommunityDetailPage = React.lazy(() =>
+  import("./pages/CommunityDetailPage")
+);
 
 const { Content } = Layout;
 
@@ -354,6 +357,18 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <CalendarPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Community Detail route */}
+            <Route
+              path="/community/:communityId"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CommunityDetailPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -33,6 +33,13 @@
 .todo-checkbox {
   margin-top: 4px;
   margin-right: 8px;
+  cursor: pointer !important;
+  transform: scale(1.1);
+}
+
+/* Enhance checkbox hover effect */
+.todo-checkbox:hover .ant-checkbox-inner {
+  border-color: #1890ff !important;
 }
 
 .todo-title-container {
@@ -99,6 +106,26 @@
   border: none !important;
 }
 
+/* Enhance subtask item hover */
+.subtask-item:hover {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+/* Make subtask checkboxes more clickable */
+.subtask-item .ant-checkbox-wrapper {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.subtask-item .ant-checkbox {
+  transform: scale(1.1);
+}
+
 .todo-actions {
   display: flex;
   align-items: center;
@@ -119,4 +146,20 @@
   .todo-title-container {
     max-width: calc(100% - 24px);
   }
+}
+
+/* Animation for task completion */
+@keyframes fadeComplete {
+  from {
+    opacity: 1;
+    background-color: transparent;
+  }
+  to {
+    opacity: 0.75;
+    background-color: #f9f9f9;
+  }
+}
+
+.todo-card.todo-completed {
+  animation: fadeComplete 0.3s ease-in-out;
 }
