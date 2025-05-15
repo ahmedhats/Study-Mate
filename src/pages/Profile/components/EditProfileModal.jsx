@@ -1,5 +1,14 @@
 import React from "react";
-import { Modal, Form, Input, Button, Upload, message } from "antd";
+import {
+  Modal,
+  Form,
+  Input,
+  Button,
+  Upload,
+  message,
+  Select,
+  Radio,
+} from "antd";
 import { EyeInvisibleOutlined, EyeTwoTone } from "@ant-design/icons";
 import { updateUserProfile } from "../../../services/api/userService";
 
@@ -21,6 +30,41 @@ const EditProfileModal = ({
       message.error("Failed to update profile");
     }
   };
+
+  const educationOptions = [
+    { value: "high_school", label: "High School" },
+    { value: "bachelors", label: "Bachelor's" },
+    { value: "masters", label: "Master's" },
+    { value: "phd", label: "PhD" },
+    { value: "other", label: "Other" },
+  ];
+  const majorOptions = [
+    "Computer Science",
+    "Biology",
+    "Literature",
+    "Engineering",
+    "Business",
+    "Mathematics",
+    "Other",
+  ];
+  const interestOptions = [
+    "Math",
+    "Science",
+    "Programming",
+    "Art",
+    "Music",
+    "Sports",
+    "Other",
+  ];
+  const hobbyOptions = [
+    "Reading",
+    "Gaming",
+    "Traveling",
+    "Cooking",
+    "Music",
+    "Sports",
+    "Other",
+  ];
 
   return (
     <Modal
@@ -54,57 +98,79 @@ const EditProfileModal = ({
           </Upload>
         </div>
 
-        <div className="form-row">
-          <Form.Item name="firstName" label="First Name" className="form-col">
-            <Input placeholder="First Name" />
-          </Form.Item>
-
-          <Form.Item name="lastName" label="Last Name" className="form-col">
-            <Input placeholder="Last Name" />
-          </Form.Item>
-        </div>
-
-        <div className="form-row">
-          <Form.Item name="email" label="Email" className="form-col">
-            <Input placeholder="Email" />
-          </Form.Item>
-
-          <Form.Item name="phone" label="Phone" className="form-col">
-            <Input placeholder="Phone" />
-          </Form.Item>
-        </div>
-
-        <div className="password-section">
-          <h4>Change Password</h4>
-          <div className="form-row">
-            <Form.Item
-              name="oldPassword"
-              label="Old Password"
-              className="form-col"
-            >
-              <Input.Password
-                placeholder="Enter old password"
-                iconRender={(visible) =>
-                  visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="newPassword"
-              label="New Password"
-              className="form-col"
-            >
-              <Input.Password
-                placeholder="Enter new password"
-                iconRender={(visible) =>
-                  visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
-                }
-              />
-            </Form.Item>
-          </div>
-        </div>
-
+        <Form.Item name="name" label="Full Name">
+          <Input placeholder="Full Name" />
+        </Form.Item>
+        <Form.Item name="email" label="Email">
+          <Input placeholder="Email" />
+        </Form.Item>
+        <Form.Item
+          name="education"
+          label="Education Level"
+          rules={[
+            { required: true, message: "Please select your education level" },
+          ]}
+        >
+          <Select placeholder="Select your education level">
+            {educationOptions.map((opt) => (
+              <Select.Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item
+          name="major"
+          label="Field of Study/Major"
+          rules={[{ required: true, message: "Please select your major" }]}
+        >
+          <Select placeholder="Select your major">
+            {majorOptions.map((opt) => (
+              <Select.Option key={opt} value={opt}>
+                {opt}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item
+          name="interests"
+          label="Academic Interests"
+          rules={[{ required: true, message: "Please select your interests" }]}
+        >
+          <Select mode="multiple" placeholder="Select your interests">
+            {interestOptions.map((opt) => (
+              <Select.Option key={opt} value={opt}>
+                {opt}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item
+          name="hobbies"
+          label="Hobbies"
+          rules={[{ required: true, message: "Please select your hobbies" }]}
+        >
+          <Select mode="multiple" placeholder="Select your hobbies">
+            {hobbyOptions.map((opt) => (
+              <Select.Option key={opt} value={opt}>
+                {opt}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item
+          name="studyPreference"
+          label="Study Preference"
+          rules={[
+            { required: true, message: "Please select your study preference" },
+          ]}
+        >
+          <Radio.Group>
+            <Radio.Button value="individual">Individual Study</Radio.Button>
+            <Radio.Button value="group">Group Study</Radio.Button>
+            <Radio.Button value="both">Both</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
         <div className="modal-footer">
           <Button onClick={onCancel}>Cancel</Button>
           <Button type="primary" htmlType="submit">

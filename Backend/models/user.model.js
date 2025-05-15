@@ -7,7 +7,8 @@ const userSchema = new mongoose.Schema({
         unique: true,
         trim: true,
         minlength: 3,
-        maxlength: 30
+        maxlength: 30,
+        index: true
     },
     name: {
         type: String,
@@ -22,6 +23,7 @@ const userSchema = new mongoose.Schema({
         unique: true,
         trim: true,
         lowercase: true,
+        index: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
     },
     password: {
@@ -49,8 +51,8 @@ const userSchema = new mongoose.Schema({
     }],
     studyPreference: {
         type: String,
-        enum: ['morning', 'afternoon', 'evening', 'night'],
-        default: 'evening'
+        enum: ['individual', 'group', 'both'],
+        default: 'individual'
     },
     birthDate: {
         type: Date,
@@ -206,8 +208,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
 userSchema.index({ status: 1 });
 userSchema.index({ 'statistics.lastActive': -1 });
 userSchema.index({ education: 1 });

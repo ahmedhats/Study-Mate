@@ -15,6 +15,14 @@ import {
 } from "@ant-design/icons";
 import "../styles/Timer.css";
 
+// Only import notificationSound if it exists, otherwise fallback
+let notificationSound;
+try {
+  notificationSound = require("../assets/notification.mp3");
+} catch (e) {
+  notificationSound = null;
+}
+
 const { Title, Text } = Typography;
 
 const Timer = () => {
@@ -28,21 +36,35 @@ const Timer = () => {
   const [breakTime, setBreakTime] = useState(5);
   const [isBreak, setIsBreak] = useState(false);
 
+  const audioRef = React.useRef(null);
+
   useEffect(() => {
     let interval = null;
     if (isActive && time > 0) {
       interval = setInterval(() => {
-        setTime((time) => {
-          if (time <= 1) {
+        setTime((prevTime) => {
+          if (prevTime <= 1) {
             if (mode === "pomodoro") {
-              // Switch between work and break
-              setIsBreak(!isBreak);
-              return isBreak ? workTime * 60 : breakTime * 60;
+              if (!isBreak) {
+                setIsBreak(true);
+                setTime(breakTime * 60);
+                setTimeout(() => {
+                  if (audioRef.current) audioRef.current.play();
+                }, 100);
+                return breakTime * 60;
+              } else {
+                setIsBreak(false);
+                setTime(workTime * 60);
+                setTimeout(() => {
+                  if (audioRef.current) audioRef.current.play();
+                }, 100);
+                return workTime * 60;
+              }
             }
             setIsActive(false);
             return 0;
           }
-          return time - 1;
+          return prevTime - 1;
         });
       }, 1000);
     }
@@ -84,6 +106,9 @@ const Timer = () => {
 
   return (
     <div className="timer-container">
+      {notificationSound && (
+        <audio ref={audioRef} src={notificationSound} preload="auto" />
+      )}
       <Card className="timer-card">
         <Title level={2}>
           {mode === "pomodoro" ? "Pomodoro Timer" : "Custom Timer"}

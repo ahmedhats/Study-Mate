@@ -85,10 +85,18 @@ const Signup = () => {
     try {
       const response = await signup(formData);
       if (response.success) {
+        // Store token and user in localStorage
+        localStorage.setItem(
+          "userData",
+          JSON.stringify({
+            token: response.token,
+            user: response.user,
+          })
+        );
         message.success(
           "Registration successful! Please check your email to verify your account."
         );
-        navigate("/login");
+        navigate("/profile-setup");
       } else {
         if (response.message === "Email or username already exists") {
           setErrors({

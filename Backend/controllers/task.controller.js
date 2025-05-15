@@ -5,7 +5,7 @@ const httpStatus = require('http-status');
 // Get all tasks for the authenticated user
 exports.getTasks = async (req, res, next) => {
     try {
-        const tasks = await Task.find({ user: req.user._id });
+        const tasks = await Task.find({ createdBy: req.user._id });
         res.json({ success: true, data: tasks });
     } catch (error) {
         next(error);
@@ -15,7 +15,7 @@ exports.getTasks = async (req, res, next) => {
 // Get a single task
 exports.getTask = async (req, res, next) => {
     try {
-        const task = await Task.findOne({ _id: req.params.id, user: req.user._id });
+        const task = await Task.findOne({ _id: req.params.id, createdBy: req.user._id });
         if (!task) {
             throw new ApiError(httpStatus.NOT_FOUND, 'Task not found');
         }
@@ -30,7 +30,7 @@ exports.createTask = async (req, res, next) => {
     try {
         const task = await Task.create({
             ...req.body,
-            user: req.user._id
+            createdBy: req.user._id
         });
         res.status(201).json({ success: true, data: task });
     } catch (error) {
@@ -42,7 +42,7 @@ exports.createTask = async (req, res, next) => {
 exports.updateTask = async (req, res, next) => {
     try {
         const task = await Task.findOneAndUpdate(
-            { _id: req.params.id, user: req.user._id },
+            { _id: req.params.id, createdBy: req.user._id },
             req.body,
             { new: true }
         );
@@ -58,7 +58,7 @@ exports.updateTask = async (req, res, next) => {
 // Delete a task
 exports.deleteTask = async (req, res, next) => {
     try {
-        const task = await Task.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+        const task = await Task.findOneAndDelete({ _id: req.params.id, createdBy: req.user._id });
         if (!task) {
             throw new ApiError(httpStatus.NOT_FOUND, 'Task not found');
         }
@@ -73,7 +73,7 @@ exports.searchTasks = async (req, res, next) => {
     try {
         const { query } = req.query;
         const tasks = await Task.find({
-            user: req.user._id,
+            createdBy: req.user._id,
             $or: [
                 { title: { $regex: query, $options: 'i' } },
                 { description: { $regex: query, $options: 'i' } }

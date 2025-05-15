@@ -223,3 +223,51 @@ module.exports.addRecentActivity = async (req, res, next) => {
         next(error);
     }
 };
+
+// Update own profile (for /users/profile)
+module.exports.updateOwnProfile = async (req, res, next) => {
+    try {
+        console.log('updateOwnProfile called');
+        console.log('req.user:', req.user);
+        console.log('req.body:', req.body);
+        const userId = req.user._id;
+        const updateData = req.body;
+
+        // Remove sensitive fields from update
+        delete updateData.password;
+        delete updateData.resetPasswordToken;
+        delete updateData.resetPasswordExpires;
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            {
+                new: true,
+                runValidators: true
+            }
+        ).select('-password -resetPasswordToken -resetPasswordExpires');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json(user);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Get own profile (for /users/profile)
+module.exports.getOwnProfile = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId)
+            .select('-password -resetPasswordToken -resetPasswordExpires');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        next(error);
+    }
+};

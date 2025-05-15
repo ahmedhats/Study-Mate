@@ -1,6 +1,15 @@
 // src/components/layout/Sidebar.jsx
 import React from "react";
-import { Layout, Menu, Avatar, Typography, Space, Button } from "antd";
+import {
+  Layout,
+  Menu,
+  Avatar,
+  Typography,
+  Space,
+  Button,
+  Drawer,
+  Grid,
+} from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DashboardOutlined,
@@ -22,6 +31,7 @@ import "../../styles/sidebar.css";
 
 const { Sider } = Layout;
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 // Helper function to create menu items (optional but keeps structure clean)
 // Added 'path' property for linking and key generation
@@ -32,6 +42,8 @@ function getItem(label, key, icon, path, children, type, onClick) {
 const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const screens = useBreakpoint();
+  const [drawerVisible, setDrawerVisible] = React.useState(false);
 
   const handleProfileClick = () => {
     navigate("/profile");
@@ -86,13 +98,12 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
   const handleMenuClick = ({ key }) => {
     const clickedItem = findMenuItem(sidebarMenuItems, key);
     if (clickedItem?.onClick) {
-      // If item has an onClick handler (like Logout), call it
       clickedItem.onClick();
     } else if (clickedItem?.path) {
-      // Otherwise, navigate if it has a path
       navigate(clickedItem.path);
     }
-    // Add logic for submenu clicks if needed (usually handled by AntD)
+    // Close the Drawer on mobile after any menu click
+    if (isMobile) setDrawerVisible(false);
   };
 
   // Helper to find a menu item by key in nested structure
@@ -141,85 +152,89 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
     return ["mine-design", "purweb-design"]; // Keep teamspaces open by default for now
   };
 
+  // --- Responsive rendering ---
+  const isMobile = !screens.md;
+
+  const sidebarContent = (
+    <div className="sidebar-content-wrapper">
+      <div className="sidebar-scrollable-content">
+        <div
+          className="sidebar-header"
+          onClick={handleProfileClick}
+          style={{ cursor: "pointer" }}
+        >
+          <Space align="center" className="sidebar-header-space">
+            <Avatar size={40} className="sidebar-avatar">
+              {userData
+                ? `${userData.firstName?.charAt(0)}${userData.lastName?.charAt(
+                    0
+                  )}`
+                : "??"}
+            </Avatar>
+            {!collapsed && (
+              <div className="user-info">
+                <Text strong className="user-name">
+                  {userData
+                    ? `${userData.firstName} ${userData.lastName}`
+                    : "Loading..."}
+                </Text>
+                <Text type="secondary" className="user-email">
+                  {userData?.email}
+                </Text>
+              </div>
+            )}
+          </Space>
+        </div>
+        <Menu
+          mode="inline"
+          selectedKeys={getSelectedKeys()}
+          defaultOpenKeys={getDefaultOpenKeys()}
+          items={sidebarMenuItems}
+          className="sidebar-menu"
+          inlineCollapsed={collapsed && !isMobile}
+          onClick={handleMenuClick}
+        />
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    // Render Drawer for mobile
+    return (
+      <>
+        <Button
+          className="sidebar-mobile-trigger"
+          icon={drawerVisible ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+          style={{ position: "fixed", top: 16, left: 16, zIndex: 1100 }}
+          onClick={() => setDrawerVisible((v) => !v)}
+        />
+        <Drawer
+          title="Menu"
+          placement="top"
+          open={drawerVisible}
+          onClose={() => setDrawerVisible(false)}
+          height="auto"
+          bodyStyle={{ padding: 0 }}
+          className="sidebar-mobile-drawer"
+        >
+          {sidebarContent}
+        </Drawer>
+      </>
+    );
+  }
+
+  // Desktop: render Sider
   return (
-    // Use collapsedWidth={80} which is the Ant Design default
     <Sider
       trigger={null}
       collapsible
       collapsed={collapsed}
       width={250}
       collapsedWidth={80}
-      className="app-sidebar" // Use a more specific class name
+      className="app-sidebar"
       theme="light"
     >
-      {/* Content Wrapper enables flex layout for trigger */}
-      <div className="sidebar-content-wrapper">
-        {/* Scrollable area for header, menu, etc. */}
-        <div className="sidebar-scrollable-content">
-          {/* Sidebar Header */}
-          <div
-            className="sidebar-header"
-            onClick={handleProfileClick}
-            style={{ cursor: "pointer" }}
-          >
-            <Space align="center" className="sidebar-header-space">
-              <Avatar size={40} className="sidebar-avatar">
-                {userData
-                  ? `${userData.firstName?.charAt(
-                      0
-                    )}${userData.lastName?.charAt(0)}`
-                  : "??"}
-              </Avatar>
-              {!collapsed && (
-                <div className="user-info">
-                  <Text strong className="user-name">
-                    {userData
-                      ? `${userData.firstName} ${userData.lastName}`
-                      : "Loading..."}
-                  </Text>
-                  <Text type="secondary" className="user-email">
-                    {userData?.email}
-                  </Text>
-                </div>
-              )}
-            </Space>
-          </div>
-
-          {/* Sidebar Menu */}
-          <Menu
-            mode="inline"
-            selectedKeys={getSelectedKeys()} // Dynamically set selected keys
-            defaultOpenKeys={getDefaultOpenKeys()} // Keep relevant submenus open
-            items={sidebarMenuItems}
-            className="sidebar-menu"
-            inlineCollapsed={collapsed}
-            onClick={handleMenuClick} // Centralized click handler
-          />
-
-          {/* Add Folder Button */}
-          {!collapsed && (
-            <Button
-              type="text"
-              icon={<PlusOutlined />}
-              className="add-folder-btn"
-            >
-              Add Folder
-            </Button>
-          )}
-        </div>{" "}
-        {/* End scrollable content */}
-        {/* Sidebar Footer/Trigger Area (Stays at bottom) */}
-        <div className="sidebar-trigger-area">
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            className="sidebar-trigger-btn"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} // Accessibility
-          />
-        </div>
-      </div>{" "}
-      {/* End content wrapper */}
+      {sidebarContent}
     </Sider>
   );
 };

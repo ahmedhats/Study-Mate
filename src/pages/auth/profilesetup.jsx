@@ -1,5 +1,5 @@
 // src/pages/ProfileSetup.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Input, Select, Radio, Steps, Button, message, Spin } from "antd";
 import { updateUserProfile } from "../../services/api/userService";
@@ -12,7 +12,95 @@ const ProfileSetup = () => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
+
+  const educationOptions = [
+    { value: "high_school", label: "High School" },
+    { value: "bachelors", label: "Bachelor's" },
+    { value: "masters", label: "Master's" },
+    { value: "phd", label: "PhD" },
+    { value: "other", label: "Other" },
+  ];
+  const majorOptions = [
+    "Computer Science",
+    "Biology",
+    "Literature",
+    "Engineering",
+    "Business",
+    "Mathematics",
+    "Other",
+  ];
+  const interestOptions = [
+    "Math",
+    "Science",
+    "Programming",
+    "Art",
+    "Music",
+    "Sports",
+    "Other",
+  ];
+  const hobbyOptions = [
+    "Reading",
+    "Gaming",
+    "Traveling",
+    "Cooking",
+    "Music",
+    "Sports",
+    "Other",
+  ];
+  const [showCustomEducation, setShowCustomEducation] = useState(false);
+  const [showCustomMajor, setShowCustomMajor] = useState(false);
+  const [showCustomInterest, setShowCustomInterest] = useState(false);
+  const [showCustomHobby, setShowCustomHobby] = useState(false);
+  const [customEducation, setCustomEducation] = useState("");
+  const [customMajor, setCustomMajor] = useState("");
+  const [customInterest, setCustomInterest] = useState("");
+  const [customHobby, setCustomHobby] = useState("");
+
+  useEffect(() => {
+    // Check for userData in localStorage
+    const userData = localStorage.getItem("userData");
+    if (!userData) {
+      navigate("/login");
+    } else {
+      try {
+        const parsed = JSON.parse(userData);
+        if (parsed.user?.profileCompleted === true) {
+          navigate("/dashboard");
+          return;
+        }
+      } catch {}
+      setCheckingAuth(false);
+      // Pre-fill form with existing user data if available
+      try {
+        const parsed = JSON.parse(userData);
+        form.setFieldsValue({
+          education: parsed.user?.education || "",
+          major: parsed.user?.major || "",
+          interests: parsed.user?.interests || [],
+          hobbies: parsed.user?.hobbies || [],
+          studyPreference: parsed.user?.studyPreference || "",
+          studyGoals: parsed.user?.studyGoals || "",
+        });
+      } catch {}
+    }
+  }, [navigate, form]);
+
+  if (checkingAuth) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   const steps = [
     {
@@ -37,21 +125,62 @@ const ProfileSetup = () => {
         localStorage.getItem("userData") || "{}"
       );
 
+      // Merge custom fields if 'Other' is selected
+      const education =
+        values.education === "other"
+          ? values.customEducation
+          : values.education;
+      const major =
+        values.major === "Other" ? values.customMajor : values.major;
+      const interests =
+        (values.interests || []).includes("Other") && values.customInterest
+          ? [
+              ...(values.interests || []).filter((i) => i !== "Other"),
+              values.customInterest,
+            ]
+          : values.interests;
+      const hobbies =
+        (values.hobbies || []).includes("Other") && values.customHobby
+          ? [
+              ...(values.hobbies || []).filter((h) => h !== "Other"),
+              values.customHobby,
+            ]
+          : values.hobbies;
+
       // Merge new profile data with existing user data
       const updatedUserData = {
         ...existingUserData,
-        ...values,
+        education,
+        major,
+        interests,
+        hobbies,
+        studyPreference: values.studyPreference,
+        studyGoals: values.studyGoals,
         profileCompleted: true,
       };
 
-      // Update user data in localStorage
-      localStorage.setItem("userData", JSON.stringify(updatedUserData));
-
       // Call the update service
-      await updateUserProfile(updatedUserData);
-
-      message.success("Profile setup completed successfully!");
-      navigate("/dashboard");
+      const result = await updateUserProfile(updatedUserData);
+      console.log("Profile update result:", result);
+      if (result && !result.error && !result.message) {
+        // Update localStorage with backend response (ensure profileCompleted is true)
+        const newUserData = {
+          ...existingUserData,
+          user: {
+            ...existingUserData.user,
+            ...result,
+            profileCompleted: true,
+          },
+          token: existingUserData.token,
+        };
+        localStorage.setItem("userData", JSON.stringify(newUserData));
+        message.success("Profile setup completed successfully!");
+        navigate("/dashboard");
+      } else {
+        message.error(
+          result.message || "Failed to save profile. Please try again."
+        );
+      }
     } catch (error) {
       message.error("Failed to save profile. Please try again.");
       console.error("Profile setup error:", error);
@@ -116,25 +245,64 @@ const ProfileSetup = () => {
                 },
               ]}
             >
-              <Select>
-                <Select.Option value="high_school">High School</Select.Option>
-                <Select.Option value="undergraduate">
-                  Undergraduate
-                </Select.Option>
-                <Select.Option value="graduate">Graduate</Select.Option>
-                <Select.Option value="phd">PhD</Select.Option>
-                <Select.Option value="other">Other</Select.Option>
+              <Select
+                onChange={(val) => setShowCustomEducation(val === "other")}
+                placeholder="Select your education level"
+              >
+                {educationOptions.map((opt) => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
+            {showCustomEducation && (
+              <Form.Item
+                name="customEducation"
+                label="Custom Education Level"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please enter your education level",
+                  },
+                ]}
+              >
+                <Input
+                  value={customEducation}
+                  onChange={(e) => setCustomEducation(e.target.value)}
+                  placeholder="Enter your education level"
+                />
+              </Form.Item>
+            )}
             <Form.Item
               name="major"
               label="Field of Study/Major"
-              rules={[
-                { required: true, message: "Please enter your field of study" },
-              ]}
+              rules={[{ required: true, message: "Please select your major" }]}
             >
-              <Input placeholder="E.g., Computer Science, Biology, Literature" />
+              <Select
+                onChange={(val) => setShowCustomMajor(val === "Other")}
+                placeholder="Select your major"
+              >
+                {majorOptions.map((opt) => (
+                  <Select.Option key={opt} value={opt}>
+                    {opt}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
+            {showCustomMajor && (
+              <Form.Item
+                name="customMajor"
+                label="Custom Major"
+                rules={[{ required: true, message: "Please enter your major" }]}
+              >
+                <Input
+                  value={customMajor}
+                  onChange={(e) => setCustomMajor(e.target.value)}
+                  placeholder="Enter your major"
+                />
+              </Form.Item>
+            )}
           </>
         );
       case 1:
@@ -144,27 +312,72 @@ const ProfileSetup = () => {
               name="interests"
               label="Academic Interests"
               rules={[
-                {
-                  required: true,
-                  message: "Please share your academic interests",
-                },
+                { required: true, message: "Please select your interests" },
               ]}
             >
-              <TextArea
-                placeholder="What subjects are you most interested in studying?"
-                rows={3}
-              />
+              <Select
+                mode="multiple"
+                onChange={(vals) =>
+                  setShowCustomInterest(vals.includes("Other"))
+                }
+                placeholder="Select your interests"
+              >
+                {interestOptions.map((opt) => (
+                  <Select.Option key={opt} value={opt}>
+                    {opt}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
+            {showCustomInterest && (
+              <Form.Item
+                name="customInterest"
+                label="Custom Interest(s)"
+                rules={[
+                  { required: true, message: "Please enter your interest(s)" },
+                ]}
+              >
+                <Input
+                  value={customInterest}
+                  onChange={(e) => setCustomInterest(e.target.value)}
+                  placeholder="Enter your interest(s)"
+                />
+              </Form.Item>
+            )}
             <Form.Item
               name="hobbies"
               label="Hobbies"
-              rules={[{ required: true, message: "Please share your hobbies" }]}
+              rules={[
+                { required: true, message: "Please select your hobbies" },
+              ]}
             >
-              <TextArea
-                placeholder="What do you enjoy doing outside of your studies?"
-                rows={3}
-              />
+              <Select
+                mode="multiple"
+                onChange={(vals) => setShowCustomHobby(vals.includes("Other"))}
+                placeholder="Select your hobbies"
+              >
+                {hobbyOptions.map((opt) => (
+                  <Select.Option key={opt} value={opt}>
+                    {opt}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
+            {showCustomHobby && (
+              <Form.Item
+                name="customHobby"
+                label="Custom Hobby(ies)"
+                rules={[
+                  { required: true, message: "Please enter your hobby(ies)" },
+                ]}
+              >
+                <Input
+                  value={customHobby}
+                  onChange={(e) => setCustomHobby(e.target.value)}
+                  placeholder="Enter your hobby(ies)"
+                />
+              </Form.Item>
+            )}
           </>
         );
       case 2:
@@ -242,12 +455,6 @@ const ProfileSetup = () => {
             {currentStep === steps.length - 1 && (
               <Button type="primary" htmlType="submit" loading={loading}>
                 Complete Setup
-              </Button>
-            )}
-
-            {currentStep === 0 && (
-              <Button className="skip-button" onClick={handleSkip}>
-                Skip for Now
               </Button>
             )}
           </div>

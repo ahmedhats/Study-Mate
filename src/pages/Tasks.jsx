@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, message, Spin } from "antd";
+import { Card, message, Spin, notification } from "antd";
 import TaskModal from "../components/features/tasks/TaskModal";
 import TaskHeader from "../components/features/tasks/TaskHeader";
 import TaskList from "../components/features/tasks/TaskList";
@@ -18,43 +18,49 @@ const TasksPage = () => {
 
   useEffect(() => {
     fetchTasks();
-
-    // Connect to WebSocket
-    websocketService.connect();
-
-    // Subscribe to task updates
-    const handleTaskUpdate = (data) => {
-      setTasks((prevTasks) => {
-        const taskIndex = prevTasks.findIndex(
-          (task) => task._id === data.taskId
-        );
-        if (taskIndex !== -1) {
-          const updatedTasks = [...prevTasks];
-          updatedTasks[taskIndex] = {
-            ...updatedTasks[taskIndex],
-            ...data.update,
-          };
-          return updatedTasks;
-        }
-        return prevTasks;
-      });
-    };
-
-    websocketService.subscribe("task_update", handleTaskUpdate);
-
-    // Cleanup on unmount
-    return () => {
-      websocketService.unsubscribe("task_update", handleTaskUpdate);
-      websocketService.disconnect();
-    };
   }, []);
 
+  const notifyUpcomingTasks = (tasks) => {
+    const now = new Date();
+    tasks.forEach((task) => {
+      if (task.dueDate) {
+        const due = new Date(task.dueDate);
+        const diff = (due - now) / (1000 * 60 * 60 * 24); // days
+        if (diff <= 1 && diff >= 0) {
+          notification.warning({
+            message: "Task Due Soon",
+            description: `Task "${task.title}" is due in less than 1 day!`,
+            duration: 5,
+          });
+        }
+      }
+    });
+  };
+
   const fetchTasks = async () => {
+    setLoading(true);
     try {
       const response = await getAllTasks();
-      setTasks(response.data || []);
+      setTasks(response.data?.data || []);
+      notifyUpcomingTasks(response.data?.data || []);
+      // Update local storage backup on successful fetch
+      localStorage.setItem(
+        "tasks_backup",
+        JSON.stringify(response.data?.data || [])
+      );
     } catch (error) {
-      message.error("Failed to fetch tasks");
+      const errMsg =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch tasks";
+      message.error(errMsg);
+      console.error("Tasks fetch error:", error);
+      // Fallback: Load tasks from local storage backup
+      const localTasks = JSON.parse(
+        localStorage.getItem("tasks_backup") || "[]"
+      );
+      setTasks(localTasks);
+      notifyUpcomingTasks(localTasks);
     } finally {
       setLoading(false);
     }
@@ -64,21 +70,57 @@ const TasksPage = () => {
     try {
       const taskData = {
         ...values,
-        dueDate: values.dueDate.format("YYYY-MM-DD"),
+        dueDate: values.dueDate
+          ? values.dueDate.format("YYYY-MM-DD")
+          : undefined,
         completed: false,
       };
-
+      // Ensure required fields are present
+      if (!taskData.title || !taskData.priority || !taskData.status) {
+        message.error("Title, priority, and status are required.");
+        return;
+      }
       const response = await createTask(taskData);
-      const newTask = response.data;
-
-      // Notify other users about the new task
-      websocketService.sendTaskUpdate(newTask._id, newTask);
-
-      setTasks([...tasks, newTask]);
+      if (!response.data || !response.data.success) {
+        throw new Error(response.data?.message || "Task creation failed");
+      }
+      websocketService.sendTaskUpdate(
+        response.data.data._id,
+        response.data.data
+      );
       setIsModalVisible(false);
       message.success("Task added successfully");
+      await fetchTasks();
     } catch (error) {
-      message.error(error.response?.data?.message || "Failed to add task");
+      const errMsg =
+        error.response?.data?.message || error.message || "Failed to add task";
+      message.error(errMsg);
+      console.error("Task add error:", error);
+      // Fallback: Add to local storage if backend is down
+      if (
+        !navigator.onLine ||
+        errMsg.includes("Network") ||
+        errMsg.includes("Failed to fetch")
+      ) {
+        const localTasks = JSON.parse(
+          localStorage.getItem("tasks_backup") || "[]"
+        );
+        // Generate a temporary ID for offline task
+        const tempId = `local-${Date.now()}`;
+        const offlineTask = {
+          ...values,
+          _id: tempId,
+          dueDate: values.dueDate
+            ? values.dueDate.format("YYYY-MM-DD")
+            : undefined,
+          completed: false,
+        };
+        localTasks.push(offlineTask);
+        localStorage.setItem("tasks_backup", JSON.stringify(localTasks));
+        setTasks([...tasks, offlineTask]);
+        setIsModalVisible(false);
+        message.success("Task saved locally (offline mode)");
+      }
     }
   };
 
@@ -90,14 +132,20 @@ const TasksPage = () => {
       const updatedTask = {
         ...task,
         completed: !task.completed,
+        status: !task.completed ? "completed" : "todo",
       };
 
-      const response = await updateTask(taskId, updatedTask);
-
-      // Notify other users about the task update
-      websocketService.sendTaskUpdate(taskId, updatedTask);
-
-      setTasks(tasks.map((t) => (t._id === taskId ? response.data : t)));
+      try {
+        await updateTask(taskId, updatedTask);
+        websocketService.sendTaskUpdate(taskId, updatedTask);
+        await fetchTasks();
+      } catch (err) {
+        // If backend fails, still update locally
+        const newTasks = tasks.map((t) => (t._id === taskId ? updatedTask : t));
+        setTasks(newTasks);
+        localStorage.setItem("tasks_backup", JSON.stringify(newTasks));
+        websocketService.sendTaskUpdate(taskId, updatedTask);
+      }
     } catch (error) {
       message.error("Failed to update task");
     }
@@ -105,13 +153,20 @@ const TasksPage = () => {
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await deleteTask(taskId);
-
-      // Notify other users about the task deletion
-      websocketService.sendTaskUpdate(taskId, { deleted: true });
-
-      setTasks(tasks.filter((t) => t._id !== taskId));
-      message.success("Task deleted successfully");
+      try {
+        await deleteTask(taskId);
+        websocketService.sendTaskUpdate(taskId, { deleted: true });
+        await fetchTasks();
+        message.success("Task deleted successfully");
+        return;
+      } catch (err) {
+        // If backend fails, still delete locally
+      }
+      // Remove from UI and local storage if backend fails
+      const newTasks = tasks.filter((t) => t._id !== taskId);
+      setTasks(newTasks);
+      localStorage.setItem("tasks_backup", JSON.stringify(newTasks));
+      message.success("Task deleted locally (offline mode)");
     } catch (error) {
       message.error("Failed to delete task");
     }

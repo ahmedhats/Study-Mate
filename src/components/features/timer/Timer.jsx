@@ -6,6 +6,8 @@ import {
   PlayCircleOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import timerOnSound from "../../../assets/sounds/timerOn.mp3";
+import timerEndSound from "../../../assets/sounds/timerEnd.mp3";
 
 const { Title, Text } = Typography;
 
@@ -16,6 +18,8 @@ const Timer = ({ onComplete }) => {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [breakTime, setBreakTime] = useState(5 * 60); // 5 minutes in seconds
   const [isBreak, setIsBreak] = useState(false);
+  const timerOnAudio = React.useRef(null);
+  const timerEndAudio = React.useRef(null);
 
   useEffect(() => {
     let interval = null;
@@ -43,6 +47,23 @@ const Timer = ({ onComplete }) => {
     }
     return () => clearInterval(interval);
   }, [isActive, goalTime, isBreak, breakTime, onComplete]);
+
+  // Play sound when timer starts
+  useEffect(() => {
+    if (isActive && time === 0) {
+      timerOnAudio.current?.play();
+    }
+  }, [isActive, time]);
+
+  // Play sound when timer ends (work or break)
+  useEffect(() => {
+    if (time === 0 && !isActive && (isBreak || !isBreak)) {
+      // Only play when a session ends, not on initial mount
+      if (timerEndAudio.current && time !== 0) {
+        timerEndAudio.current.play();
+      }
+    }
+  }, [time, isActive, isBreak]);
 
   const toggleTimer = () => {
     setIsActive(!isActive);
@@ -144,6 +165,10 @@ const Timer = ({ onComplete }) => {
           </Button>
         </Space>
       </Modal>
+
+      {/* Audio elements for sounds */}
+      <audio ref={timerOnAudio} src={timerOnSound} preload="auto" />
+      <audio ref={timerEndAudio} src={timerEndSound} preload="auto" />
     </Card>
   );
 };

@@ -39,10 +39,26 @@ const LoadingFallback = () => (
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const isAuthenticated = localStorage.getItem("userData") !== null;
+  const userData = localStorage.getItem("userData");
+  const isAuthenticated = userData !== null;
+  let profileCompleted = false;
+  if (isAuthenticated) {
+    try {
+      const parsed = JSON.parse(userData);
+      profileCompleted = parsed.user?.profileCompleted === true;
+    } catch {}
+  }
 
+  // If not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If authenticated but profile not completed, redirect to /profile-setup
+  const isOnProfileSetup = location.pathname === "/profile-setup";
+  const isLoggingOut = location.pathname === "/logout";
+  if (!profileCompleted && !isOnProfileSetup && !isLoggingOut) {
+    return <Navigate to="/profile-setup" replace />;
   }
 
   return children;

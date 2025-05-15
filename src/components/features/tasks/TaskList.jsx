@@ -40,19 +40,19 @@ const formatStatus = (status) => {
     .join(" ");
 };
 
-const TaskList = ({ tasks, onToggleCompletion, onDeleteTask }) => {
+const TaskList = ({ tasks = [], onToggleCompletion, onDeleteTask }) => {
   return (
     <List
-      dataSource={tasks}
+      dataSource={Array.isArray(tasks) ? tasks : []}
       renderItem={(task) => (
         <List.Item
           actions={[
             <Space>
               <Tag color={getPriorityColor(task.priority)}>
-                {task.priority.toUpperCase()}
+                {(task.priority || "").toUpperCase()}
               </Tag>
               <Tag color={getStatusColor(task.status)}>
-                {formatStatus(task.status)}
+                {formatStatus(task.status || "")}
               </Tag>
               <Popconfirm
                 title="Delete this task?"

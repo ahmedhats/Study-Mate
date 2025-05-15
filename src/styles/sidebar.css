@@ -252,18 +252,43 @@
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
+    padding-top: 56px;
+    /* Add space for the sidebar trigger button */
   }
 
   .main-content.collapsed {
     margin-left: 0;
+    padding-top: 56px;
   }
 
   .app-sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.2s;
+    display: none !important;
   }
 
-  .app-sidebar.expanded {
-    transform: translateX(0);
+  .sidebar-mobile-trigger {
+    display: block !important;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1100;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .sidebar-mobile-drawer .sidebar-content-wrapper {
+    height: auto;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar-mobile-trigger {
+    display: none !important;
+  }
+
+  .sidebar-mobile-drawer {
+    display: none !important;
   }
 }
