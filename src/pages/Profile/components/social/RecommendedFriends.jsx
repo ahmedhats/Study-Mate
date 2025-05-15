@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   List,
   Avatar,
@@ -31,12 +31,17 @@ import "./RecommendedFriends.css";
 const { Text, Title } = Typography;
 const { Option } = Select;
 
-const RecommendedFriends = () => {
+const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCriteria, setFilterCriteria] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [displayedRecommendations, setDisplayedRecommendations] = useState([]);
+
+  // Expose fetchRecommendations through ref
+  useImperativeHandle(ref, () => ({
+    fetchRecommendations
+  }));
 
   useEffect(() => {
     fetchRecommendations();
@@ -88,7 +93,6 @@ const RecommendedFriends = () => {
       
       if (response.matches) {
         console.log('Received recommendations:', response.matches);
-        // Check if the response came from Python or JavaScript
         if (response.matchingMethod) {
           console.log('Matching method used:', response.matchingMethod);
         }
@@ -96,7 +100,6 @@ const RecommendedFriends = () => {
       } else if (response.error) {
         console.error('Error from API:', response.error);
         message.error(response.error);
-        // Set empty recommendations to show the Empty state
         setRecommendations([]);
       } else {
         console.error('Invalid response format:', response);
@@ -114,22 +117,38 @@ const RecommendedFriends = () => {
 
   const handleSendRequest = async (userId) => {
     try {
-      await sendFriendRequest(userId);
+      console.log('Sending friend request to user:', userId);
+      const response = await sendFriendRequest(userId);
       
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
       notification.success({
         message: "Friend Request Sent",
         description: "Your friend request has been sent successfully!",
         placement: "topRight",
       });
 
+      // Remove the user from recommendations
       setRecommendations((prev) =>
         prev.filter((rec) => rec.user._id !== userId)
       );
+      
+      // Also update displayed recommendations
+      setDisplayedRecommendations((prev) =>
+        prev.filter((rec) => rec.user._id !== userId)
+      );
+
+      // Notify parent component that a friend request was sent
+      if (onFriendRequestSent) {
+        onFriendRequestSent();
+      }
     } catch (error) {
       console.error("Error sending friend request:", error);
       notification.error({
         message: "Failed to Send Request",
-        description: "Unable to send friend request. Please try again later.",
+        description: error.message || "Unable to send friend request. Please try again later.",
         placement: "topRight",
       });
     }
@@ -330,6 +349,6 @@ const RecommendedFriends = () => {
       />
     </div>
   );
-};
+});
 
 export default RecommendedFriends; 

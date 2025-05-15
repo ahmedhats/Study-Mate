@@ -115,6 +115,21 @@ export const getSentRequests = async () => {
   }
 };
 
+// Cancel a friend request
+export const cancelFriendRequest = async (userId) => {
+  try {
+    const response = await axiosInstance.post("/social/friend-requests/cancel", {
+      userId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error canceling friend request:", error);
+    return {
+      error: error.response?.data?.message || "Failed to cancel friend request",
+    };
+  }
+};
+
 // Get recommended friends
 export const getRecommendedFriends = async () => {
   try {

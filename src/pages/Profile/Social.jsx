@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Tabs, Card } from "antd";
 import { UserOutlined, TeamOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import Friends from "./components/social/Friends";
@@ -9,6 +9,25 @@ const { TabPane } = Tabs;
 
 const Social = () => {
   const [activeTab, setActiveTab] = useState("friends");
+  const friendsRef = useRef();
+  const recommendedRef = useRef();
+
+  const handleFriendRequestSent = () => {
+    // Switch to the friends tab to show sent requests
+    setActiveTab("friends");
+    
+    // Refresh the friends list
+    if (friendsRef.current) {
+      friendsRef.current.fetchFriendsData();
+    }
+  };
+
+  const handleFriendRequestCanceled = () => {
+    // Refresh the recommended friends list
+    if (recommendedRef.current) {
+      recommendedRef.current.fetchRecommendations();
+    }
+  };
 
   return (
     <div className="social-container">
@@ -27,7 +46,10 @@ const Social = () => {
             }
             key="friends"
           >
-            <Friends />
+            <Friends 
+              ref={friendsRef} 
+              onFriendRequestCanceled={handleFriendRequestCanceled}
+            />
           </TabPane>
           <TabPane
             tab={
@@ -38,7 +60,10 @@ const Social = () => {
             }
             key="recommended"
           >
-            <RecommendedFriends />
+            <RecommendedFriends 
+              ref={recommendedRef}
+              onFriendRequestSent={handleFriendRequestSent} 
+            />
           </TabPane>
           <TabPane
             tab={

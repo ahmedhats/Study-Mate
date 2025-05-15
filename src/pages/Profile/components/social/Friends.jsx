@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   List,
   Avatar,
@@ -31,6 +31,7 @@ import {
   removeFriend,
   getPendingRequests,
   getSentRequests,
+  cancelFriendRequest,
 } from "../../../../services/api/socialService";
 import {
   formatLastActive,
@@ -40,7 +41,7 @@ import {
 const { TabPane } = Tabs;
 const { Search } = Input;
 
-const Friends = () => {
+const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const [activeKey, setActiveKey] = useState("myFriends");
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -49,6 +50,11 @@ const Friends = () => {
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Expose fetchFriendsData through ref
+  useImperativeHandle(ref, () => ({
+    fetchFriendsData
+  }));
 
   // Load friends and requests on component mount
   useEffect(() => {
@@ -66,14 +72,14 @@ const Friends = () => {
       }
       setFriends(friendsResponse.data || []);
 
-      // Get pending friend requests
+      // Get pending requests
       const pendingResponse = await getPendingRequests();
       if (pendingResponse.error) {
         throw new Error(pendingResponse.error);
       }
       setPendingRequests(pendingResponse.data || []);
 
-      // Get sent friend requests
+      // Get sent requests
       const sentResponse = await getSentRequests();
       if (sentResponse.error) {
         throw new Error(sentResponse.error);
@@ -81,38 +87,11 @@ const Friends = () => {
       setSentRequests(sentResponse.data || []);
     } catch (error) {
       console.error("Error fetching friends data:", error);
-      message.error("Failed to load friends data");
-
-      // If API fails, use mock data temporarily for development
-      setFriends([
-        {
-          _id: "friend1",
-          name: "John Doe",
-          email: "john@example.com",
-          major: "computer_science",
-          statistics: { lastActive: new Date(Date.now() - 2 * 60000) },
-        },
-      ]);
-
-      setPendingRequests([
-        {
-          _id: "pending1",
-          name: "Alice Johnson",
-          email: "alice@example.com",
-          major: "computer_science",
-          statistics: { lastActive: new Date(Date.now() - 45 * 60000) },
-        },
-      ]);
-
-      setSentRequests([
-        {
-          _id: "sent1",
-          name: "Carol Williams",
-          email: "carol@example.com",
-          major: "mathematics",
-          statistics: { lastActive: new Date(Date.now() - 5 * 60000) },
-        },
-      ]);
+      notification.error({
+        message: "Failed to Load Friends Data",
+        description: error.message || "There was a problem loading your friends data.",
+        placement: "topRight",
+      });
     } finally {
       setLoading(false);
     }
@@ -206,38 +185,32 @@ const Friends = () => {
 
   const handleAcceptRequest = async (userId) => {
     try {
-      // Call the real API to accept a friend request
-      console.log("Accepting friend request from user:", userId);
-      const response = await acceptFriendRequest(userId);
+      // Find the friend request for this user
+      const request = pendingRequests.find(request => request.sender._id === userId);
+      if (!request) {
+        throw new Error("Friend request not found");
+      }
+
+      // Call the API to accept the request
+      const response = await acceptFriendRequest(request._id);
 
       if (response.error) {
         throw new Error(response.error);
       }
 
-      // Show success message
       notification.success({
         message: "Friend Request Accepted",
         description: "You are now friends!",
         placement: "topRight",
       });
 
-      // Move the user from pending requests to friends
-      const user = pendingRequests.find((user) => user._id === userId);
-      if (user) {
-        setFriends([...friends, user]);
-        setPendingRequests(
-          pendingRequests.filter((user) => user._id !== userId)
-        );
-      }
-
       // Refresh the friends list to ensure it's up to date
-      fetchFriendsData();
+      await fetchFriendsData();
     } catch (error) {
       console.error("Error accepting friend request:", error);
       notification.error({
         message: "Failed to Accept Request",
-        description:
-          error.message || "There was a problem accepting the friend request.",
+        description: error.message || "There was a problem accepting the friend request.",
         placement: "topRight",
       });
     }
@@ -245,21 +218,34 @@ const Friends = () => {
 
   const handleRejectRequest = async (userId) => {
     try {
-      // Call the real API to reject a friend request
-      console.log("Rejecting friend request from user:", userId);
-      const response = await rejectFriendRequest(userId);
+      // Find the friend request for this user
+      const request = pendingRequests.find(request => request.sender._id === userId);
+      if (!request) {
+        throw new Error("Friend request not found");
+      }
+
+      // Call the API to reject the request
+      const response = await rejectFriendRequest(request._id);
 
       if (response.error) {
         throw new Error(response.error);
       }
 
-      message.success("Friend request rejected");
+      notification.success({
+        message: "Friend Request Rejected",
+        description: "The friend request has been rejected.",
+        placement: "topRight",
+      });
 
-      // Update UI to reflect the change - remove from pending requests
-      setPendingRequests(pendingRequests.filter((user) => user._id !== userId));
+      // Refresh the friends list to ensure it's up to date
+      await fetchFriendsData();
     } catch (error) {
       console.error("Error rejecting friend request:", error);
-      message.error("Failed to reject friend request");
+      notification.error({
+        message: "Failed to Reject Request",
+        description: error.message || "There was a problem rejecting the friend request.",
+        placement: "topRight",
+      });
     }
   };
 
@@ -284,9 +270,7 @@ const Friends = () => {
 
   const handleCancelRequest = async (userId) => {
     try {
-      // In a real implementation, we would call an API to cancel the request
-      console.log("Canceling friend request to user:", userId);
-      const response = await rejectFriendRequest(userId);
+      const response = await cancelFriendRequest(userId);
 
       if (response.error) {
         throw new Error(response.error);
@@ -296,6 +280,11 @@ const Friends = () => {
 
       // Update UI to reflect the change
       setSentRequests(sentRequests.filter((user) => user._id !== userId));
+
+      // Notify parent component to refresh recommended friends
+      if (onFriendRequestCanceled) {
+        onFriendRequestCanceled();
+      }
     } catch (error) {
       console.error("Error canceling friend request:", error);
       message.error("Failed to cancel friend request");
@@ -424,18 +413,18 @@ const Friends = () => {
           ) : pendingRequests.length > 0 ? (
             <List
               dataSource={pendingRequests}
-              renderItem={(user) =>
-                renderUserItem(user, [
+              renderItem={(request) =>
+                renderUserItem(request.sender, [
                   <Button
                     type="primary"
                     icon={<CheckOutlined />}
-                    onClick={() => handleAcceptRequest(user._id)}
+                    onClick={() => handleAcceptRequest(request.sender._id)}
                   >
                     Accept
                   </Button>,
                   <Button
                     icon={<CloseOutlined />}
-                    onClick={() => handleRejectRequest(user._id)}
+                    onClick={() => handleRejectRequest(request.sender._id)}
                   >
                     Reject
                   </Button>,
@@ -531,6 +520,6 @@ const Friends = () => {
       </Modal>
     </div>
   );
-};
+});
 
 export default Friends;

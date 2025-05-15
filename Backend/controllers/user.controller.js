@@ -477,7 +477,10 @@ module.exports.getPendingRequests = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: pendingRequests.map(request => request.sender)
+      data: pendingRequests.map(request => ({
+        _id: request._id,
+        sender: request.sender
+      }))
     });
   } catch (error) {
     console.error("Error fetching pending requests:", error);
@@ -520,12 +523,12 @@ module.exports.acceptFriendRequest = async (req, res) => {
     const { requestId } = req.body;
     const userId = req.userId;
 
-    // Find and update the friend request
+    // Find the friend request
     const friendRequest = await FriendRequest.findOne({
       _id: requestId,
       receiver: userId,
       status: 'pending'
-    });
+    }).populate('sender');
 
     if (!friendRequest) {
       return res.status(404).json({
@@ -541,16 +544,17 @@ module.exports.acceptFriendRequest = async (req, res) => {
     // Add each user to the other's friends list
     await Promise.all([
       User.findByIdAndUpdate(userId, { 
-        $addToSet: { friends: friendRequest.sender } 
+        $addToSet: { friends: friendRequest.sender._id } 
       }),
-      User.findByIdAndUpdate(friendRequest.sender, { 
+      User.findByIdAndUpdate(friendRequest.sender._id, { 
         $addToSet: { friends: userId } 
       })
     ]);
 
     return res.status(200).json({
       success: true,
-      message: "Friend request accepted"
+      message: "Friend request accepted",
+      data: friendRequest.sender
     });
   } catch (error) {
     console.error("Error accepting friend request:", error);
@@ -632,6 +636,40 @@ module.exports.removeFriend = async (req, res) => {
   }
 };
 
+// Function to cancel a sent friend request
+module.exports.cancelFriendRequest = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const senderId = req.userId;
+
+    // Find and delete the friend request
+    const friendRequest = await FriendRequest.findOneAndDelete({
+      sender: senderId,
+      receiver: userId,
+      status: 'pending'
+    });
+
+    if (!friendRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Friend request not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Friend request canceled successfully"
+    });
+  } catch (error) {
+    console.error("Error canceling friend request:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel friend request",
+      error: error.message
+    });
+  }
+};
+
 // Get recommended friends
 module.exports.getRecommendedFriends = async (req, res, next) => {
   try {
@@ -645,11 +683,23 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
       });
     }
 
-    // Get all users except current user and their friends
+    // Get pending friend requests sent to the current user
+    const pendingRequests = await FriendRequest.find({
+      receiver: userId,
+      status: 'pending'
+    });
+
+    // Get IDs of users who have sent requests
+    const usersSentRequests = pendingRequests.map(request => request.sender);
+
+    // Get all users except:
+    // 1. Current user
+    // 2. Their friends
+    // 3. Users who have sent them friend requests
     const otherUsers = await User.find({
       _id: { 
         $ne: userId, // not the current user
-        $nin: currentUser.friends // not already friends
+        $nin: [...currentUser.friends, ...usersSentRequests] // not friends and not users who sent requests
       }
     }).select('name email major interests hobbies education studyPreference');
 
