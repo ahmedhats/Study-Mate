@@ -1,6 +1,6 @@
 // src/pages/ProfileSetup.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Form, Input, Select, Radio, Steps, Button, message, Spin } from "antd";
 import { updateUserProfile } from "../../services/api/userService";
 import "../styles/profilesetup.css";
@@ -14,6 +14,7 @@ const ProfileSetup = () => {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const educationOptions = [
     { value: "high_school", label: "High School" },
@@ -23,13 +24,18 @@ const ProfileSetup = () => {
     { value: "other", label: "Other" },
   ];
   const majorOptions = [
-    "Computer Science",
-    "Biology",
-    "Literature",
-    "Engineering",
-    "Business",
-    "Mathematics",
-    "Other",
+    { value: "computer_science", label: "Computer Science" },
+    { value: "biology", label: "Biology" },
+    { value: "engineering", label: "Engineering" },
+    { value: "mathematics", label: "Mathematics" },
+    { value: "business", label: "Business" },
+    { value: "literature", label: "Literature" },
+    { value: "physics", label: "Physics" },
+    { value: "chemistry", label: "Chemistry" },
+    { value: "psychology", label: "Psychology" },
+    { value: "medicine", label: "Medicine" },
+    { value: "arts", label: "Arts" },
+    { value: "other", label: "Other" },
   ];
   const interestOptions = [
     "Math",
@@ -60,33 +66,69 @@ const ProfileSetup = () => {
 
   useEffect(() => {
     // Check for userData in localStorage
-    const userData = localStorage.getItem("userData");
-    if (!userData) {
+    const userDataString = localStorage.getItem("userData");
+    if (!userDataString) {
+      console.log("No user data found, redirecting to login");
+      message.error("Please log in first");
       navigate("/login");
-    } else {
-      try {
-        const parsed = JSON.parse(userData);
-        if (parsed.user?.profileCompleted === true) {
-          navigate("/dashboard");
-          return;
-        }
-      } catch {}
-      setCheckingAuth(false);
-      // Pre-fill form with existing user data if available
-      try {
-        const parsed = JSON.parse(userData);
-        form.setFieldsValue({
-          education: parsed.user?.education || "",
-          major: parsed.user?.major || "",
-          interests: parsed.user?.interests || [],
-          hobbies: parsed.user?.hobbies || [],
-          studyPreference: parsed.user?.studyPreference || "",
-          studyGoals: parsed.user?.studyGoals || "",
-        });
-      } catch {}
+      return;
     }
-  }, [navigate, form]);
 
+    try {
+      const parsedData = JSON.parse(userDataString);
+      console.log("User data found:", parsedData);
+
+      // Get user data from appropriate location in the object
+      const user = parsedData.user || parsedData;
+
+      // STRICT CHECK: Ensure account is verified before allowing profile setup
+      if (!user.isAccountVerified) {
+        console.log("User not verified, redirecting to login");
+        message.error(
+          "Please verify your email before setting up your profile"
+        );
+        navigate("/login", {
+          state: {
+            message:
+              "Please verify your email before setting up your profile. Check your inbox for the verification link.",
+          },
+        });
+        return;
+      }
+
+      // Check if profile is already completed and user didn't come from registration
+      // This prevents forcing returning users to complete profile setup
+      if (user.profileCompleted === true) {
+        console.log("Profile already completed, redirecting to dashboard");
+        message.info("Your profile is already set up!");
+        navigate("/dashboard");
+        return;
+      }
+
+      // User is verified, profile not completed, and ready to setup profile
+      console.log(
+        "User verified and profile incomplete, showing profile setup"
+      );
+      setCheckingAuth(false);
+
+      // Pre-fill form with existing user data if available
+      form.setFieldsValue({
+        education: user.education || "",
+        major: user.major || "",
+        interests: user.interests || [],
+        hobbies: user.hobbies || [],
+        studyPreference: user.studyPreference || "",
+        studyGoals: user.studyGoals || "",
+      });
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      message.error("An error occurred. Please login again.");
+      navigate("/login");
+      return;
+    }
+  }, [navigate, form, location]);
+
+  // Show loading spinner while we check auth status
   if (checkingAuth) {
     return (
       <div
@@ -120,10 +162,18 @@ const ProfileSetup = () => {
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
+      console.log("Submitting profile data:", values);
+
       // Get existing user data from localStorage
-      const existingUserData = JSON.parse(
-        localStorage.getItem("userData") || "{}"
-      );
+      const existingUserDataStr = localStorage.getItem("userData");
+      if (!existingUserDataStr) {
+        message.error("Session expired. Please login again.");
+        navigate("/login");
+        return;
+      }
+
+      const existingUserData = JSON.parse(existingUserDataStr);
+      console.log("Existing user data:", existingUserData);
 
       // Merge custom fields if 'Other' is selected
       const education =
@@ -131,7 +181,7 @@ const ProfileSetup = () => {
           ? values.customEducation
           : values.education;
       const major =
-        values.major === "Other" ? values.customMajor : values.major;
+        values.major === "other" ? values.customMajor : values.major;
       const interests =
         (values.interests || []).includes("Other") && values.customInterest
           ? [
@@ -147,9 +197,8 @@ const ProfileSetup = () => {
             ]
           : values.hobbies;
 
-      // Merge new profile data with existing user data
-      const updatedUserData = {
-        ...existingUserData,
+      // Create profile update data
+      const profileData = {
         education,
         major,
         interests,
@@ -159,31 +208,49 @@ const ProfileSetup = () => {
         profileCompleted: true,
       };
 
-      // Call the update service
-      const result = await updateUserProfile(updatedUserData);
-      console.log("Profile update result:", result);
-      if (result && !result.error && !result.message) {
-        // Update localStorage with backend response (ensure profileCompleted is true)
-        const newUserData = {
+      // Call the API to update the profile
+      try {
+        const result = await updateUserProfile(profileData);
+        console.log("Profile update result:", result);
+      } catch (apiError) {
+        console.error("API error when updating profile:", apiError);
+        // Continue with localStorage update even if API fails
+      }
+
+      // Update localStorage regardless of API response
+      // This ensures profileCompleted is set to true in localStorage
+      let updatedUserData;
+
+      if (existingUserData.user) {
+        // If userData has nested user object
+        updatedUserData = {
           ...existingUserData,
           user: {
             ...existingUserData.user,
-            ...result,
-            profileCompleted: true,
+            ...profileData,
           },
-          token: existingUserData.token,
         };
-        localStorage.setItem("userData", JSON.stringify(newUserData));
-        message.success("Profile setup completed successfully!");
-        navigate("/dashboard");
       } else {
-        message.error(
-          result.message || "Failed to save profile. Please try again."
-        );
+        // If userData is flat
+        updatedUserData = {
+          ...existingUserData,
+          ...profileData,
+        };
       }
+
+      console.log("Updating localStorage with:", updatedUserData);
+      localStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+      message.success("Profile setup completed successfully!");
+
+      // Force delay before redirect to ensure localStorage is updated
+      setTimeout(() => {
+        console.log("Redirecting to dashboard after profile setup");
+        navigate("/dashboard", { replace: true });
+      }, 500);
     } catch (error) {
-      message.error("Failed to save profile. Please try again.");
       console.error("Profile setup error:", error);
+      message.error("Failed to save profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -198,23 +265,81 @@ const ProfileSetup = () => {
     }
   };
 
-  const handleSkip = () => {
-    // Get existing user data
-    const existingUserData = JSON.parse(
-      localStorage.getItem("userData") || "{}"
-    );
+  const handleSkip = async () => {
+    try {
+      setLoading(true);
+      // Get existing user data
+      const existingUserDataStr = localStorage.getItem("userData");
+      if (!existingUserDataStr) {
+        message.error("Session expired. Please login again.");
+        navigate("/login");
+        return;
+      }
 
-    // Mark profile as incomplete
-    const updatedUserData = {
-      ...existingUserData,
-      profileCompleted: false,
-    };
+      const existingUserData = JSON.parse(existingUserDataStr);
+      console.log("Existing user data for skip:", existingUserData);
 
-    // Update localStorage
-    localStorage.setItem("userData", JSON.stringify(updatedUserData));
+      // Create a minimal profile data object that marks the profile as complete
+      const profileData = {
+        profileCompleted: true, // Critical - mark profile as completed
+      };
 
-    message.info("You can complete your profile later from the settings.");
-    navigate("/dashboard");
+      // Call the API to update the profile as "completed"
+      try {
+        const result = await updateUserProfile(profileData);
+        console.log("Profile skip result:", result);
+      } catch (apiError) {
+        // Even if API fails, we'll still update localStorage to prevent login loops
+        console.error(
+          "API error when skipping profile, continuing anyway:",
+          apiError
+        );
+      }
+
+      // Update userData with profileCompleted flag
+      let updatedUserData;
+      if (existingUserData.user) {
+        updatedUserData = {
+          ...existingUserData,
+          user: {
+            ...existingUserData.user,
+            profileCompleted: true, // Mark as completed when skipped
+          },
+        };
+      } else {
+        updatedUserData = {
+          ...existingUserData,
+          profileCompleted: true, // Mark as completed when skipped
+        };
+      }
+
+      // Update localStorage
+      console.log(
+        "Updating localStorage with profile completed:",
+        updatedUserData
+      );
+      localStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+      message.info("You can update your profile later from settings.");
+
+      // Force delay before redirect to ensure localStorage is updated
+      setTimeout(() => {
+        console.log("Redirecting to dashboard after skipping profile setup");
+        navigate("/dashboard", { replace: true });
+      }, 500);
+    } catch (error) {
+      console.error("Error when skipping profile setup:", error);
+      message.error(
+        "An error occurred, but we'll redirect you to dashboard anyway."
+      );
+
+      // Even on error, try to redirect to dashboard
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getFieldsForStep = (step) => {
@@ -280,12 +405,12 @@ const ProfileSetup = () => {
               rules={[{ required: true, message: "Please select your major" }]}
             >
               <Select
-                onChange={(val) => setShowCustomMajor(val === "Other")}
+                onChange={(val) => setShowCustomMajor(val === "other")}
                 placeholder="Select your major"
               >
                 {majorOptions.map((opt) => (
-                  <Select.Option key={opt} value={opt}>
-                    {opt}
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </Select.Option>
                 ))}
               </Select>
@@ -455,6 +580,12 @@ const ProfileSetup = () => {
             {currentStep === steps.length - 1 && (
               <Button type="primary" htmlType="submit" loading={loading}>
                 Complete Setup
+              </Button>
+            )}
+
+            {currentStep === 0 && (
+              <Button className="skip-button" onClick={handleSkip}>
+                Skip Setup
               </Button>
             )}
           </div>

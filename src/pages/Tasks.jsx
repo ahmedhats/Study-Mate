@@ -41,13 +41,22 @@ const TasksPage = () => {
     setLoading(true);
     try {
       const response = await getAllTasks();
-      setTasks(response.data?.data || []);
-      notifyUpcomingTasks(response.data?.data || []);
+      // Ensure each task has a progress field calculated from subtasks
+      const tasksWithProgress = (response.data?.data || []).map((task) => {
+        if (!task.progress && task.subtasks && task.subtasks.length > 0) {
+          const totalSubtasks = task.subtasks.length;
+          const completedSubtasks = task.subtasks.filter(
+            (st) => st.completed
+          ).length;
+          task.progress = Math.round((completedSubtasks / totalSubtasks) * 100);
+        }
+        return task;
+      });
+
+      setTasks(tasksWithProgress);
+      notifyUpcomingTasks(tasksWithProgress);
       // Update local storage backup on successful fetch
-      localStorage.setItem(
-        "tasks_backup",
-        JSON.stringify(response.data?.data || [])
-      );
+      localStorage.setItem("tasks_backup", JSON.stringify(tasksWithProgress));
     } catch (error) {
       const errMsg =
         error.response?.data?.message ||
@@ -68,18 +77,33 @@ const TasksPage = () => {
 
   const handleAddTask = async (values) => {
     try {
+      // Ensure subtasks are properly formatted
+      const subtasks = values.subtasks || [];
+
       const taskData = {
         ...values,
         dueDate: values.dueDate
           ? values.dueDate.format("YYYY-MM-DD")
           : undefined,
         completed: false,
+        subtasks,
+        progress: 0, // Initial progress is 0
       };
+
+      // Calculate initial progress if there are completed subtasks
+      if (subtasks.length > 0) {
+        const completedSubtasks = subtasks.filter((st) => st.completed).length;
+        taskData.progress = Math.round(
+          (completedSubtasks / subtasks.length) * 100
+        );
+      }
+
       // Ensure required fields are present
       if (!taskData.title || !taskData.priority || !taskData.status) {
         message.error("Title, priority, and status are required.");
         return;
       }
+
       const response = await createTask(taskData);
       if (!response.data || !response.data.success) {
         throw new Error(response.data?.message || "Task creation failed");
@@ -114,7 +138,20 @@ const TasksPage = () => {
             ? values.dueDate.format("YYYY-MM-DD")
             : undefined,
           completed: false,
+          subtasks: values.subtasks || [],
+          progress: 0,
         };
+
+        // Calculate progress if there are subtasks
+        if (offlineTask.subtasks.length > 0) {
+          const completedSubtasks = offlineTask.subtasks.filter(
+            (st) => st.completed
+          ).length;
+          offlineTask.progress = Math.round(
+            (completedSubtasks / offlineTask.subtasks.length) * 100
+          );
+        }
+
         localTasks.push(offlineTask);
         localStorage.setItem("tasks_backup", JSON.stringify(localTasks));
         setTasks([...tasks, offlineTask]);
@@ -135,10 +172,67 @@ const TasksPage = () => {
         status: !task.completed ? "completed" : "todo",
       };
 
+      // If the task is being marked as completed, mark all subtasks as completed too
+      if (
+        updatedTask.completed &&
+        updatedTask.subtasks &&
+        updatedTask.subtasks.length > 0
+      ) {
+        updatedTask.subtasks = updatedTask.subtasks.map((st) => ({
+          ...st,
+          completed: true,
+        }));
+        updatedTask.progress = 100;
+      }
+      // If the task is being unchecked, don't change subtasks
+      else if (
+        !updatedTask.completed &&
+        updatedTask.subtasks &&
+        updatedTask.subtasks.length > 0
+      ) {
+        // Recalculate progress
+        const completedSubtasks = updatedTask.subtasks.filter(
+          (st) => st.completed
+        ).length;
+        updatedTask.progress = Math.round(
+          (completedSubtasks / updatedTask.subtasks.length) * 100
+        );
+      }
+
       try {
         await updateTask(taskId, updatedTask);
         websocketService.sendTaskUpdate(taskId, updatedTask);
         await fetchTasks();
+      } catch (err) {
+        // If backend fails, still update locally
+        const newTasks = tasks.map((t) => (t._id === taskId ? updatedTask : t));
+        setTasks(newTasks);
+        localStorage.setItem("tasks_backup", JSON.stringify(newTasks));
+        websocketService.sendTaskUpdate(taskId, updatedTask);
+      }
+    } catch (error) {
+      message.error("Failed to update task");
+    }
+  };
+
+  const handleUpdateTask = async (taskId, updatedTaskData) => {
+    try {
+      const task = tasks.find((t) => t._id === taskId);
+      if (!task) return;
+
+      const updatedTask = {
+        ...task,
+        ...updatedTaskData,
+      };
+
+      try {
+        await updateTask(taskId, updatedTask);
+        websocketService.sendTaskUpdate(taskId, updatedTask);
+
+        // Update local state without refetching from server
+        const newTasks = tasks.map((t) => (t._id === taskId ? updatedTask : t));
+        setTasks(newTasks);
+        localStorage.setItem("tasks_backup", JSON.stringify(newTasks));
       } catch (err) {
         // If backend fails, still update locally
         const newTasks = tasks.map((t) => (t._id === taskId ? updatedTask : t));
@@ -195,6 +289,7 @@ const TasksPage = () => {
           tasks={tasks}
           onToggleCompletion={toggleTaskCompletion}
           onDeleteTask={handleDeleteTask}
+          onUpdateTask={handleUpdateTask}
         />
       </Card>
 

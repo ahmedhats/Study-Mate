@@ -10,30 +10,77 @@ import {
   List,
   Card,
   message,
+  Divider,
+  Row,
+  Col,
+  Spin,
 } from "antd";
 import {
   CalendarOutlined,
   MoreOutlined,
   ClockCircleOutlined,
+  BookOutlined,
+  ApartmentOutlined,
+  HeartOutlined,
+  StarOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import EditProfileModal from "./components/EditProfileModal";
 import { getUserProfile } from "../../services/api/userService";
+import { formatLastActive } from "../../utils/dateFormatter";
 
 const MyProfile = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("activity");
+  const [activeTab, setActiveTab] = useState("preferences");
   const [userData, setUserData] = useState(null);
+  const [localUserData, setLocalUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // First, get the data from localStorage for immediate display
+    try {
+      const localData = localStorage.getItem("userData");
+      if (localData) {
+        const parsedData = JSON.parse(localData);
+        console.log("Local storage data:", parsedData);
+
+        // Try to get user data from both possible structures
+        const userInfo = parsedData.user || parsedData;
+        console.log("User info from localStorage:", userInfo);
+
+        // Ensure we have the education, major and preferences data
+        if (userInfo.education || userInfo.major || userInfo.studyPreference) {
+          console.log("User preferences found in localStorage");
+        } else {
+          console.warn("User preferences not found in localStorage");
+        }
+
+        setLocalUserData(userInfo);
+      }
+    } catch (error) {
+      console.error("Error parsing local user data:", error);
+    }
+
+    // Then fetch from API
     fetchUserData();
   }, []);
 
   const fetchUserData = async () => {
+    setLoading(true);
     try {
-      const data = await getUserProfile();
-      setUserData(data);
+      const response = await getUserProfile();
+      console.log("API user profile response:", response);
+
+      // Check both possible data structures from the API
+      const apiData = response.data || response;
+      console.log("API user profile data:", apiData);
+
+      setUserData(apiData);
     } catch (error) {
-      message.error("Failed to fetch user profile");
+      console.error("Failed to fetch user profile:", error);
+      message.error("Failed to load profile data from server");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,12 +95,71 @@ const MyProfile = () => {
     workItems: [],
     assignedTasks: [],
     calendarEvents: [],
+    education: "",
+    major: "",
+    interests: [],
+    hobbies: [],
+    studyPreference: "",
   };
 
-  const displayUserData = userData || defaultUserData;
+  // Merge remote and local data, prioritizing remote
+  const displayUserData = {
+    ...defaultUserData,
+    ...localUserData,
+    ...userData,
+  };
+
+  console.log("Final display user data:", displayUserData);
+
+  // Make sure we have the correct study preference format
+  if (displayUserData.studyPreference === "both") {
+    console.log("Study preference is 'both'");
+  }
+
   const workItems = displayUserData.workItems || [];
   const assignedTasks = displayUserData.assignedTasks || [];
   const calendarEvents = displayUserData.calendarEvents || [];
+
+  // Helper function to format education value
+  const formatEducation = (educationValue) => {
+    const educationMap = {
+      high_school: "High School",
+      bachelors: "Bachelor's",
+      masters: "Master's",
+      phd: "PhD",
+      other: "Other",
+    };
+    return educationMap[educationValue] || educationValue || "Not specified";
+  };
+
+  // Helper function to format major value
+  const formatMajor = (majorValue) => {
+    const majorMap = {
+      computer_science: "Computer Science",
+      biology: "Biology",
+      engineering: "Engineering",
+      mathematics: "Mathematics",
+      business: "Business",
+      literature: "Literature",
+      physics: "Physics",
+      chemistry: "Chemistry",
+      psychology: "Psychology",
+      medicine: "Medicine",
+      arts: "Arts",
+      other: "Other",
+    };
+    return majorMap[majorValue] || majorValue || "Not specified";
+  };
+
+  // Helper function to format study preference
+  const formatStudyPreference = (preference) => {
+    const preferenceMap = {
+      individual: "Individual Study",
+      group: "Group Study",
+      both: "Both Individual & Group",
+    };
+    return preferenceMap[preference] || preference || "Not specified";
+  };
 
   const getEventTypeColor = (type) => {
     const colors = {
@@ -64,179 +170,185 @@ const MyProfile = () => {
     return colors[type] || "default";
   };
 
+  if (loading && !localUserData) {
+    return (
+      <div style={{ textAlign: "center", padding: "50px" }}>
+        <Spin size="large" />
+        <p>Loading profile data...</p>
+      </div>
+    );
+  }
+
   const items = [
+    {
+      key: "preferences",
+      label: "Preferences",
+      children: (
+        <div className="preferences-content">
+          <Row gutter={[24, 24]}>
+            <Col span={24} md={12}>
+              <Card title="Academic Information" className="profile-card">
+                <div className="profile-detail-item">
+                  <div className="profile-detail-icon">
+                    <BookOutlined />
+                  </div>
+                  <div className="profile-detail-content">
+                    <h4>Education Level</h4>
+                    <p>{formatEducation(displayUserData.education)}</p>
+                  </div>
+                </div>
+                <Divider />
+                <div className="profile-detail-item">
+                  <div className="profile-detail-icon">
+                    <ApartmentOutlined />
+                  </div>
+                  <div className="profile-detail-content">
+                    <h4>Field of Study</h4>
+                    <p>{formatMajor(displayUserData.major)}</p>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+            <Col span={24} md={12}>
+              <Card title="Study Preferences" className="profile-card">
+                <div className="profile-detail-item">
+                  <div className="profile-detail-icon">
+                    <TeamOutlined />
+                  </div>
+                  <div className="profile-detail-content">
+                    <h4>Study Preference</h4>
+                    <p>
+                      {formatStudyPreference(displayUserData.studyPreference)}
+                    </p>
+                  </div>
+                </div>
+                <Divider />
+                <div className="profile-detail-item">
+                  <div className="profile-detail-icon">
+                    <StarOutlined />
+                  </div>
+                  <div className="profile-detail-content">
+                    <h4>Study Goals</h4>
+                    <p>{displayUserData.studyGoals || "No goals specified"}</p>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+            <Col span={24}>
+              <Card title="Interests & Hobbies" className="profile-card">
+                <div className="profile-detail-item">
+                  <div className="profile-detail-icon">
+                    <HeartOutlined />
+                  </div>
+                  <div className="profile-detail-content">
+                    <h4>Academic Interests</h4>
+                    <div>
+                      {displayUserData.interests &&
+                      displayUserData.interests.length > 0 ? (
+                        displayUserData.interests.map((interest, index) => (
+                          <Tag color="blue" key={index}>
+                            {interest}
+                          </Tag>
+                        ))
+                      ) : (
+                        <p>No interests specified</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Divider />
+                <div className="profile-detail-item">
+                  <div className="profile-detail-icon">
+                    <StarOutlined />
+                  </div>
+                  <div className="profile-detail-content">
+                    <h4>Hobbies</h4>
+                    <div>
+                      {displayUserData.hobbies &&
+                      displayUserData.hobbies.length > 0 ? (
+                        displayUserData.hobbies.map((hobby, index) => (
+                          <Tag color="green" key={index}>
+                            {hobby}
+                          </Tag>
+                        ))
+                      ) : (
+                        <p>No hobbies specified</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      ),
+    },
     {
       key: "activity",
       label: "Activity",
       children: (
         <div className="activity-content">
-          {workItems.map((item, index) => (
-            <div key={index} className="work-item">
-              <div className="work-info">
-                <h4>{item.title}</h4>
-                <Progress percent={item.progress} size="small" />
-              </div>
-              <div className="work-meta">
-                <Tag color={item.status === "To-Do" ? "purple" : "orange"}>
-                  {item.status}
-                </Tag>
-                <Avatar.Group>
-                  {item.assignees &&
-                    item.assignees.map((user, i) => (
-                      <Avatar key={i} size="small">
-                        U
-                      </Avatar>
-                    ))}
-                </Avatar.Group>
-                <Tag color="blue">{item.priority}</Tag>
-                <Button type="text" icon={<MoreOutlined />} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: "myWork",
-      label: "My Work",
-      children: (
-        <List
-          grid={{ gutter: 16, column: 1 }}
-          dataSource={workItems}
-          renderItem={(item) => (
-            <List.Item>
-              <Card>
-                <div className="work-item">
-                  <div className="work-info">
-                    <h4>{item.title}</h4>
-                    <Progress percent={item.progress} size="small" />
-                  </div>
-                  <div className="work-meta">
-                    <Tag color={item.status === "To-Do" ? "purple" : "orange"}>
-                      {item.status}
-                    </Tag>
-                    <Tag color="blue">{item.priority}</Tag>
-                    <Tag icon={<ClockCircleOutlined />}>{item.dueDate}</Tag>
-                  </div>
+          {workItems.length > 0 ? (
+            workItems.map((item, index) => (
+              <div key={index} className="work-item">
+                <div className="work-info">
+                  <div className="work-title">{item.title}</div>
+                  <div className="work-date">{item.date}</div>
                 </div>
-              </Card>
-            </List.Item>
+                <Progress percent={item.progress} />
+              </div>
+            ))
+          ) : (
+            <p>No activity data available</p>
           )}
-        />
-      ),
-    },
-    {
-      key: "assigned",
-      label: "Assigned",
-      children: (
-        <List
-          grid={{ gutter: 16, column: 1 }}
-          dataSource={assignedTasks}
-          renderItem={(item) => (
-            <List.Item>
-              <Card>
-                <div className="work-item">
-                  <div className="work-info">
-                    <h4>{item.title}</h4>
-                    <Progress percent={item.progress} size="small" />
-                    <div style={{ marginTop: 8 }}>
-                      <small>Assigned by: {item.assignedBy}</small>
-                    </div>
-                  </div>
-                  <div className="work-meta">
-                    <Tag color={item.status === "In Review" ? "blue" : "gold"}>
-                      {item.status}
-                    </Tag>
-                    <Tag color={item.priority === "High" ? "red" : "blue"}>
-                      {item.priority}
-                    </Tag>
-                    <Tag icon={<ClockCircleOutlined />}>{item.dueDate}</Tag>
-                  </div>
-                </div>
-              </Card>
-            </List.Item>
-          )}
-        />
-      ),
-    },
-    {
-      key: "calendar",
-      label: "Calendar",
-      children: (
-        <div className="calendar-section">
-          <Calendar
-            cellRender={(date) => {
-              const events = calendarEvents.filter(
-                (event) => event.date === date.format("YYYY-MM-DD")
-              );
-              return events.length > 0 ? (
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {events.map((event, index) => (
-                    <li key={index}>
-                      <Badge
-                        color={getEventTypeColor(event.type)}
-                        text={event.title}
-                        style={{ fontSize: "12px" }}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              ) : null;
-            }}
-          />
         </div>
       ),
     },
   ];
 
   return (
-    <div className="my-profile">
-      <div className="profile-info">
-        <div className="profile-header">
-          <Avatar size={64} className="profile-avatar">
-            {displayUserData.name ? displayUserData.name[0] : "U"}
+    <div className="my-profile-container">
+      <div className="profile-header">
+        <div className="profile-avatar">
+          <Avatar size={100}>
+            {displayUserData.name
+              ? displayUserData.name.charAt(0).toUpperCase()
+              : "U"}
           </Avatar>
-          <div className="profile-details">
-            <h2>{displayUserData.name}</h2>
-            <p>{displayUserData.email}</p>
-            <Button type="link" onClick={() => setIsEditModalVisible(true)}>
-              Edit Profile
-            </Button>
-          </div>
-          <div className="profile-meta">
-            <div className="meta-item">
-              <span className="label">Birthday</span>
-              <span className="value">{displayUserData.birthday}</span>
-            </div>
-            <div className="meta-item">
-              <span className="label">First seen</span>
-              <span className="value">{displayUserData.firstSeen}</span>
-            </div>
-            <div className="meta-item">
-              <span className="label">Type</span>
-              <span className="value">{displayUserData.type}</span>
-            </div>
-            <div className="meta-item">
-              <span className="label">User</span>
-              <Tag color="success">{displayUserData.status}</Tag>
-            </div>
-          </div>
+        </div>
+        <div className="profile-info">
+          <h2>{displayUserData.name}</h2>
+          <p>{displayUserData.email}</p>
+          <p>
+            <Tag color="blue">{formatMajor(displayUserData.major)}</Tag>
+            <Tag color="green">
+              {formatEducation(displayUserData.education)}
+            </Tag>
+          </p>
+          <Button type="primary" onClick={() => setIsEditModalVisible(true)}>
+            Edit Profile
+          </Button>
         </div>
       </div>
 
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
+        className="profile-tabs"
         items={items}
-        className="profile-content-tabs"
       />
 
-      <EditProfileModal
-        visible={isEditModalVisible}
-        onCancel={() => setIsEditModalVisible(false)}
-        userData={displayUserData}
-        onProfileUpdated={fetchUserData}
-      />
+      {isEditModalVisible && (
+        <EditProfileModal
+          visible={isEditModalVisible}
+          onClose={() => setIsEditModalVisible(false)}
+          onSave={() => {
+            setIsEditModalVisible(false);
+            fetchUserData(); // Refresh data after saving
+          }}
+          userData={displayUserData}
+        />
+      )}
     </div>
   );
 };

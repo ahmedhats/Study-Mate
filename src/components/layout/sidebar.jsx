@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout,
   Menu,
@@ -26,6 +26,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import "../../styles/sidebar.css";
 
@@ -39,11 +40,43 @@ function getItem(label, key, icon, path, children, type, onClick) {
   return { key, icon, children, label, type, onClick, path };
 }
 
-const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
+const Sidebar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const screens = useBreakpoint();
-  const [drawerVisible, setDrawerVisible] = React.useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  // Load user data from localStorage
+  useEffect(() => {
+    try {
+      const storedData = localStorage.getItem("userData");
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        console.log("User data from localStorage:", parsedData);
+
+        // Get user data from either structure
+        const user = parsedData.user || parsedData;
+
+        // Debug user data
+        console.log("User name:", user.name);
+        console.log("User email:", user.email);
+
+        // Ensure we have at least basic user data
+        if (!user.name && parsedData.name) {
+          user.name = parsedData.name;
+        }
+
+        if (!user.email && parsedData.email) {
+          user.email = parsedData.email;
+        }
+
+        setUserData(user);
+      }
+    } catch (error) {
+      console.error("Error loading user data in sidebar:", error);
+    }
+  }, []);
 
   const handleProfileClick = () => {
     navigate("/profile");
@@ -65,7 +98,7 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
     getItem("Search", "search", <SearchOutlined />, "/search"), // Example path
     getItem("Inbox", "inbox", <InboxOutlined />, "/inbox"), // Example path
     getItem("My Task", "my-task", <CheckSquareOutlined />, "/tasks"), // Example path
-    getItem("Team", "team", <TeamOutlined />, "/team"), // Example path
+    getItem("Social", "social", <TeamOutlined />, "/profile/social"), // Updated label and path
 
     getItem("Teamspaces", "grp2", null, null, null, "group"), // Group title
     getItem("Mine Design", "mine-design", <AppstoreOutlined />, null, [
@@ -155,6 +188,25 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
   // --- Responsive rendering ---
   const isMobile = !screens.md;
 
+  // Get user initials for the avatar
+  const getUserInitials = () => {
+    if (!userData) return "??";
+
+    if (userData.name) {
+      // If we have a full name
+      const nameParts = userData.name.split(" ");
+      if (nameParts.length > 1) {
+        return `${nameParts[0].charAt(0)}${nameParts[
+          nameParts.length - 1
+        ].charAt(0)}`.toUpperCase();
+      }
+      return userData.name.charAt(0).toUpperCase();
+    }
+
+    // Fallback to email
+    return userData.email ? userData.email.charAt(0).toUpperCase() : "?";
+  };
+
   const sidebarContent = (
     <div className="sidebar-content-wrapper">
       <div className="sidebar-scrollable-content">
@@ -165,21 +217,15 @@ const Sidebar = ({ collapsed, setCollapsed, userData, onLogout }) => {
         >
           <Space align="center" className="sidebar-header-space">
             <Avatar size={40} className="sidebar-avatar">
-              {userData
-                ? `${userData.firstName?.charAt(0)}${userData.lastName?.charAt(
-                    0
-                  )}`
-                : "??"}
+              {getUserInitials()}
             </Avatar>
             {!collapsed && (
               <div className="user-info">
                 <Text strong className="user-name">
-                  {userData
-                    ? `${userData.firstName} ${userData.lastName}`
-                    : "Loading..."}
+                  {userData?.name || "Loading..."}
                 </Text>
                 <Text type="secondary" className="user-email">
-                  {userData?.email}
+                  {userData?.email || ""}
                 </Text>
               </div>
             )}

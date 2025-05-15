@@ -136,3 +136,180 @@
   max-width: 400px;
   padding: 24px;
 }
+
+/* Profile Edit Modal Styles */
+.profile-edit-modal .ant-modal-content {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-edit-modal .ant-modal-header {
+  background-color: #f7f7f7;
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.profile-edit-modal .ant-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.profile-edit-form {
+  padding: 8px 0;
+}
+
+.profile-edit-form .ant-form-item-label > label {
+  font-weight: 500;
+  color: #333;
+}
+
+.profile-edit-form .ant-form-item-required::before {
+  color: #f5222d;
+}
+
+.profile-edit-form .ant-input,
+.profile-edit-form .ant-select-selector,
+.profile-edit-form .ant-input-number,
+.profile-edit-form .ant-input-affix-wrapper,
+.profile-edit-form .ant-picker {
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
+  padding: 8px 12px;
+}
+
+.profile-edit-form .ant-input:hover,
+.profile-edit-form .ant-select-selector:hover,
+.profile-edit-form .ant-input-number:hover,
+.profile-edit-form .ant-input-affix-wrapper:hover,
+.profile-edit-form .ant-picker:hover {
+  border-color: #40a9ff;
+}
+
+.profile-edit-form .ant-input:focus,
+.profile-edit-form .ant-select-selector:focus,
+.profile-edit-form .ant-input-number:focus,
+.profile-edit-form .ant-input-affix-wrapper:focus,
+.profile-edit-form .ant-picker:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.profile-edit-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.profile-edit-form .ant-radio-button-wrapper {
+  min-width: 100px;
+  text-align: center;
+}
+
+.profile-edit-form .ant-form-item-has-error .ant-input,
+.profile-edit-form .ant-form-item-has-error .ant-select-selector,
+.profile-edit-form .ant-form-item-has-error .ant-input-number,
+.profile-edit-form .ant-form-item-has-error .ant-input-affix-wrapper,
+.profile-edit-form .ant-form-item-has-error .ant-picker {
+  border-color: #ff4d4f;
+}
+
+.profile-edit-form .ant-form-item-has-error .ant-input:focus,
+.profile-edit-form .ant-form-item-has-error .ant-select-selector:focus,
+.profile-edit-form .ant-form-item-has-error .ant-input-number:focus,
+.profile-edit-form .ant-form-item-has-error .ant-input-affix-wrapper:focus,
+.profile-edit-form .ant-form-item-has-error .ant-picker:focus {
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
+.profile-edit-form .ant-select-multiple .ant-select-selection-item {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
+  padding: 0 8px;
+}
+
+/* Make sure the custom inputs look consistent */
+.profile-edit-form .ant-input-affix-wrapper {
+  padding: 0;
+}
+
+.profile-edit-form .ant-input-affix-wrapper input {
+  padding: 8px 12px;
+}
+
+.profile-edit-form .ant-select-selection-overflow {
+  flex-wrap: wrap;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+/* Profile Edit Modal Styles - Additional fixes */
+.profile-edit-modal .ant-modal-body {
+  padding: 24px;
+}
+
+.profile-edit-modal .ant-select {
+  width: 100%;
+}
+
+.profile-edit-modal .ant-select-selector {
+  min-height: 40px !important;
+  padding: 5px 12px !important;
+}
+
+.profile-edit-modal .ant-select-multiple .ant-select-selection-placeholder {
+  left: 12px;
+  right: auto;
+}
+
+.profile-edit-modal .ant-select-dropdown {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.profile-edit-modal .ant-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profile-edit-modal .ant-radio-button-wrapper {
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Additional fixes for Select components in Edit Profile */
+.profile-edit-modal .ant-form-item {
+  margin-bottom: 20px;
+}
+
+.profile-edit-modal .ant-select-selector {
+  width: 100% !important;
+}
+
+.profile-edit-modal .ant-select-selection-search {
+  width: 100% !important;
+}
+
+.profile-edit-modal .ant-select-selection-placeholder {
+  color: #bfbfbf !important;
+}
+
+.profile-edit-modal .ant-select-multiple .ant-select-selection-item {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.profile-edit-modal .ant-form-item-label {
+  padding-bottom: 6px;
+}
+
+/* Fix for Radio buttons */
+.profile-edit-modal .ant-radio-button-wrapper {
+  height: auto;
+  padding: 8px 15px;
+  line-height: 1.5;
+}

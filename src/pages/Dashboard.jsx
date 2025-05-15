@@ -4,6 +4,7 @@ import {
   ClockCircleOutlined,
   TeamOutlined,
   TrophyOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getUserProfile } from "../services/api/userService";
@@ -35,6 +36,8 @@ const Dashboard = () => {
   const handleProfileUpdate = (updatedData) => {
     setUserData({ ...userData, ...updatedData });
     setIsProfileModalVisible(false);
+    // Refresh user data after update
+    fetchUserData();
   };
 
   // Default mock data with zeros
@@ -87,7 +90,16 @@ const Dashboard = () => {
     <Layout className="dashboard-layout">
       <Content className="dashboard-content">
         <div className="dashboard-container">
-          <h1>Welcome back, {displayUserData.name.split(" ")[0]}!</h1>
+          <div className="welcome-header">
+            <h1>Welcome back, {displayUserData.name.split(" ")[0]}!</h1>
+            <Button
+              type="primary"
+              icon={<SettingOutlined />}
+              onClick={() => setIsProfileModalVisible(true)}
+            >
+              Profile Settings
+            </Button>
+          </div>
 
           <Row gutter={[24, 24]} className="action-cards">
             {actionCards.map((card, index) => (
@@ -106,34 +118,47 @@ const Dashboard = () => {
 
           <div className="profile-section">
             <div className="profile-header">
-              <h2>Your prefrences</h2>
-              <button
-                className="edit-profile-btn"
-                onClick={() => setIsProfileModalVisible(true)}
-              >
-                Edit Profile
-              </button>
+              <h2>Your preferences</h2>
             </div>
             <div className="profile-details">
               <div className="detail-item">
                 <span className="label">Education Level:</span>
-                <span className="value">{displayUserData.education}</span>
+                <span className="value">
+                  {displayUserData.education || "Not specified"}
+                </span>
               </div>
               <div className="detail-item">
                 <span className="label">Field of Study:</span>
-                <span className="value">{displayUserData.major}</span>
+                <span className="value">
+                  {displayUserData.major || "Not specified"}
+                </span>
               </div>
               <div className="detail-item">
                 <span className="label">Interests:</span>
-                <span className="value">{displayUserData.interests}</span>
+                <span className="value">
+                  {displayUserData.interests &&
+                  displayUserData.interests.length > 0
+                    ? Array.isArray(displayUserData.interests)
+                      ? displayUserData.interests.join(", ")
+                      : displayUserData.interests
+                    : "Not specified"}
+                </span>
               </div>
               <div className="detail-item">
                 <span className="label">Hobbies:</span>
-                <span className="value">{displayUserData.hobbies}</span>
+                <span className="value">
+                  {displayUserData.hobbies && displayUserData.hobbies.length > 0
+                    ? Array.isArray(displayUserData.hobbies)
+                      ? displayUserData.hobbies.join(", ")
+                      : displayUserData.hobbies
+                    : "Not specified"}
+                </span>
               </div>
               <div className="detail-item">
                 <span className="label">Study Preference:</span>
-                <span className="value">{displayUserData.studyPreference}</span>
+                <span className="value">
+                  {displayUserData.studyPreference || "Not specified"}
+                </span>
               </div>
             </div>
           </div>

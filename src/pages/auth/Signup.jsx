@@ -85,18 +85,22 @@ const Signup = () => {
     try {
       const response = await signup(formData);
       if (response.success) {
-        // Store token and user in localStorage
-        localStorage.setItem(
-          "userData",
-          JSON.stringify({
-            token: response.token,
-            user: response.user,
-          })
-        );
+        // Clear any existing userData to avoid issues
+        localStorage.removeItem("userData");
+
+        // Success message and redirect to login with clear verification instructions
         message.success(
-          "Registration successful! Please check your email to verify your account."
+          "Registration successful! Please check your email to verify your account before logging in.",
+          5
         );
-        navigate("/profile-setup");
+
+        // Redirect to login with explicit verification message
+        navigate("/login", {
+          state: {
+            message:
+              "Please check your email and verify your account before logging in. You must verify your email before accessing the application.",
+          },
+        });
       } else {
         if (response.message === "Email or username already exists") {
           setErrors({

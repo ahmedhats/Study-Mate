@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import ActivityTracker from "./components/common/ActivityTracker";
 import "./styles/App.css";
 
 // Lazy load all components
@@ -24,9 +25,11 @@ const MineDesign = React.lazy(() => import("./pages/mine-design/MineDesign"));
 const Purweb = React.lazy(() => import("./pages/purweb/Purweb"));
 const Welcome = React.lazy(() => import("./pages/Welcome"));
 const Profile = React.lazy(() => import("./pages/Profile/Profile"));
+const Social = React.lazy(() => import("./pages/Profile/Social"));
 const Login = React.lazy(() => import("./pages/auth/Login"));
 const Signup = React.lazy(() => import("./pages/auth/Signup"));
 const ProfileSetup = React.lazy(() => import("./pages/auth/profilesetup"));
+const VerifyEmail = React.lazy(() => import("./pages/auth/VerifyEmail"));
 
 const { Content } = Layout;
 
@@ -42,25 +45,72 @@ const ProtectedRoute = ({ children }) => {
   const userData = localStorage.getItem("userData");
   const isAuthenticated = userData !== null;
   let profileCompleted = false;
+  let isAccountVerified = false;
+
   if (isAuthenticated) {
     try {
+      console.log("Checking protected route access");
       const parsed = JSON.parse(userData);
-      profileCompleted = parsed.user?.profileCompleted === true;
-    } catch {}
+      // Support both data structures (with or without user object)
+      const user = parsed.user || parsed;
+
+      console.log("User data in ProtectedRoute:", user);
+
+      // Check verification and profile status
+      profileCompleted = user.profileCompleted === true;
+      isAccountVerified = user.isAccountVerified === true;
+
+      console.log("Auth status:", {
+        isAuthenticated,
+        isAccountVerified,
+        profileCompleted,
+        path: location.pathname,
+      });
+    } catch (error) {
+      console.error("Error parsing user data in ProtectedRoute:", error);
+      // Handle parse error gracefully
+      localStorage.removeItem("userData"); // Clear invalid data
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
   }
 
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
+    console.log("Not authenticated, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If authenticated but profile not completed, redirect to /profile-setup
+  // If not verified, redirect to login with verification message
+  if (!isAccountVerified) {
+    console.log("Not verified, redirecting to login with message");
+    return (
+      <Navigate
+        to="/login"
+        state={{
+          from: location,
+          message:
+            "Please verify your email before accessing this page. Check your inbox for the verification link.",
+        }}
+        replace
+      />
+    );
+  }
+
+  // Special case: If user is already on profile-setup page, allow it
   const isOnProfileSetup = location.pathname === "/profile-setup";
-  const isLoggingOut = location.pathname === "/logout";
-  if (!profileCompleted && !isOnProfileSetup && !isLoggingOut) {
+  if (isOnProfileSetup) {
+    console.log("User is on profile setup page, allowing access");
+    return children;
+  }
+
+  // If profile is not completed, redirect to profile setup
+  if (!profileCompleted) {
+    console.log("Profile not completed, redirecting to profile setup");
     return <Navigate to="/profile-setup" replace />;
   }
 
+  // All checks passed, render the protected route content
+  console.log("All checks passed, rendering protected content");
   return children;
 };
 
@@ -92,6 +142,8 @@ const App = () => {
     <Router>
       <ErrorBoundary>
         <Suspense fallback={<LoadingFallback />}>
+          {/* Activity tracker to update last active status */}
+          <ActivityTracker />
           <Routes>
             {/* Public Routes */}
             <Route
@@ -107,6 +159,14 @@ const App = () => {
               element={
                 <AuthLayout>
                   <Signup />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/verify-email"
+              element={
+                <AuthLayout>
+                  <VerifyEmail />
                 </AuthLayout>
               }
             />
@@ -238,6 +298,18 @@ const App = () => {
             />
             <Route
               path="/profile/*"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Profile />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add a direct route for the social tab specifically for sidebar navigation */}
+            <Route
+              path="/profile/social"
               element={
                 <ProtectedRoute>
                   <MainLayout>

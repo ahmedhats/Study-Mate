@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { message } from "antd";
 import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import { login } from "../../services/api/authService";
@@ -20,6 +20,23 @@ const Login = () => {
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check for verification message from redirect
+  useEffect(() => {
+    // If the URL is malformed and has /login/login, redirect to just /login
+    if (location.pathname.endsWith("/login/login")) {
+      navigate("/login", { replace: true, state: location.state });
+      return;
+    }
+
+    if (location.state?.message) {
+      setErrors((prev) => ({
+        ...prev,
+        general: location.state.message,
+      }));
+    }
+  }, [location, navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -39,11 +56,15 @@ const Login = () => {
         password: "Incorrect email or password",
         general: "",
       });
-    } else if (msg === "Please verify your email address") {
+    } else if (
+      msg === "Please verify your email address" ||
+      msg === "Email not verified"
+    ) {
       setErrors({
         email: "",
         password: "",
-        general: "Please verify your email address before logging in",
+        general:
+          "Please verify your email address before logging in. Check your inbox for the verification link.",
       });
     } else if (msg === "Email and Password are required") {
       setErrors({
@@ -85,21 +106,63 @@ const Login = () => {
 
     setLoading(true);
     try {
+      // Clear any existing userData to prevent conflicts
+      localStorage.removeItem("userData");
+
       const response = await login({
         email: formData.email,
         password: formData.password,
       });
+
+      console.log("Login response:", response);
+
       if (response.success) {
-        message.success("Login successful!");
-        if (response.user && response.user.profileCompleted === false) {
-          navigate("/profilesetup");
-        } else {
-          navigate("/dashboard");
+        // STRICT VERIFICATION CHECK: Prevent unverified users from proceeding
+        if (response.user && !response.user.isAccountVerified) {
+          setErrors({
+            email: "",
+            password: "",
+            general:
+              "Please verify your email before logging in. Check your inbox for the verification link.",
+          });
+          setLoading(false);
+          return;
         }
+
+        message.success("Login successful!");
+
+        // Create userData object with verification and profile info
+        const userData = {
+          token: response.token,
+          user: {
+            ...response.user,
+            isAccountVerified: response.user.isAccountVerified === true,
+            profileCompleted: response.user.profileCompleted === true,
+          },
+        };
+
+        // Store the user data in localStorage - make sure it's saved before navigation
+        console.log("Saving userData to localStorage:", userData);
+        localStorage.setItem("userData", JSON.stringify(userData));
+
+        // Force a small delay to ensure localStorage is updated
+        setTimeout(() => {
+          // Navigate based on profile completion status
+          if (response.user && response.user.profileCompleted !== true) {
+            console.log("Profile not completed, redirecting to profile setup");
+            // Navigate to profile setup - user is verified but profile not complete
+            navigate("/profile-setup", { replace: true });
+          } else {
+            console.log("Profile completed, redirecting to dashboard");
+            // Returning user with completed profile - go directly to dashboard
+            navigate("/dashboard", { replace: true });
+          }
+        }, 300);
       } else {
         showLoginError(response.message);
       }
     } catch (error) {
+      console.error("Login error:", error);
       const msg = error.message || error.response?.data?.message;
       showLoginError(msg);
     } finally {

@@ -1,29 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, Layout } from "antd";
+import { useLocation } from "react-router-dom";
+import { UserOutlined, TeamOutlined, SettingOutlined } from "@ant-design/icons";
 import MyProfile from "./MyProfile";
-import Team from "./Team";
+import Social from "./Social";
 import Setting from "./Setting";
 import "./Profile.css";
 
 const { Content } = Layout;
 
 const Profile = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("myProfile");
+
+  // Set active tab based on the URL path
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes("/social")) {
+      setActiveTab("social");
+    } else if (path.includes("/setting")) {
+      setActiveTab("setting");
+    } else {
+      setActiveTab("myProfile");
+    }
+  }, [location.pathname]);
 
   const items = [
     {
       key: "myProfile",
       label: "My Profile",
+      icon: <UserOutlined />,
       children: <MyProfile />,
     },
     {
-      key: "team",
-      label: "Team",
-      children: <Team />,
+      key: "social",
+      label: "Social",
+      icon: <TeamOutlined />,
+      children: <Social />,
     },
     {
       key: "setting",
       label: "Setting",
+      icon: <SettingOutlined />,
       children: <Setting />,
     },
   ];
