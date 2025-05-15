@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Tabs, Card } from "antd";
-import { UserOutlined, TeamOutlined } from "@ant-design/icons";
+import { UserOutlined, TeamOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import Friends from "./components/social/Friends";
 import Teams from "./components/social/Teams";
+import RecommendedFriends from "./components/social/RecommendedFriends";
 
 const { TabPane } = Tabs;
 
@@ -27,6 +28,17 @@ const Social = () => {
             key="friends"
           >
             <Friends />
+          </TabPane>
+          <TabPane
+            tab={
+              <span>
+                <UsergroupAddOutlined />
+                Recommended
+              </span>
+            }
+            key="recommended"
+          >
+            <RecommendedFriends />
           </TabPane>
           <TabPane
             tab={

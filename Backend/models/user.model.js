@@ -76,6 +76,13 @@ const userSchema = new mongoose.Schema(
       enum: ["individual", "group", "both"],
       default: "individual",
     },
+
+    studyGoals: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    
     birthDate: {
       type: Date,
       required: true,

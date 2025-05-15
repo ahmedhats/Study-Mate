@@ -114,3 +114,18 @@ export const getSentRequests = async () => {
     };
   }
 };
+
+// Get recommended friends
+export const getRecommendedFriends = async () => {
+  try {
+    const response = await axiosInstance.get("/social/recommended-friends");
+    console.log('API Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching recommended friends:", error);
+    return {
+      error: error.response?.data?.error || error.response?.data?.message || "Failed to fetch recommended friends",
+      details: error.response?.data?.details || error.message
+    };
+  }
+};

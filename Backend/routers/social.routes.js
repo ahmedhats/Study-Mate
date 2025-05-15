@@ -11,6 +11,13 @@ router.delete(
   userController.removeFriend
 );
 
+// Recommended friends endpoint
+router.get(
+  "/recommended-friends",
+  auth.verifyToken,
+  userController.getRecommendedFriends
+);
+
 // Friend requests endpoints
 router.post(
   "/friend-requests/send",
