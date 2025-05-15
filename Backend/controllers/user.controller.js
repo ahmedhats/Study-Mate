@@ -367,10 +367,10 @@ module.exports.getUserFriends = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Find the user and populate their friends list
+    // Find the user and populate their friends list with all relevant fields
     const user = await User.findById(userId).populate({
       path: "friends",
-      select: "_id name email major statistics.lastActive",
+      select: "_id name email major interests hobbies education studyPreference statistics.lastActive"
     });
 
     if (!user) {
@@ -473,7 +473,7 @@ module.exports.getPendingRequests = async (req, res) => {
     const pendingRequests = await FriendRequest.find({
       receiver: userId,
       status: 'pending'
-    }).populate('sender', '_id name email major statistics.lastActive');
+    }).populate('sender', '_id name email major interests hobbies education studyPreference statistics.lastActive');
 
     return res.status(200).json({
       success: true,
@@ -501,7 +501,7 @@ module.exports.getSentRequests = async (req, res) => {
     const sentRequests = await FriendRequest.find({
       sender: userId,
       status: 'pending'
-    }).populate('receiver', '_id name email major statistics.lastActive');
+    }).populate('receiver', '_id name email major interests hobbies education studyPreference statistics.lastActive');
 
     return res.status(200).json({
       success: true,

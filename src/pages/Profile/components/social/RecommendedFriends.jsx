@@ -16,6 +16,10 @@ import {
   Select,
   Space,
   Input,
+  Badge,
+  Modal,
+  Descriptions,
+  Divider,
 } from "antd";
 import {
   UserAddOutlined,
@@ -24,11 +28,16 @@ import {
   EnvironmentOutlined,
   FilterOutlined,
   SearchOutlined,
+  ClockCircleOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import { sendFriendRequest, getRecommendedFriends } from "../../../../services/api/socialService";
+import { formatLastActive, isUserOnline } from "../../../../utils/dateFormatter";
 import "./RecommendedFriends.css";
 
-const { Text, Title } = Typography;
+const { Text, Title, Paragraph } = Typography;
 const { Option } = Select;
 
 const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
@@ -37,6 +46,8 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
   const [filterCriteria, setFilterCriteria] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [displayedRecommendations, setDisplayedRecommendations] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // Expose fetchRecommendations through ref
   useImperativeHandle(ref, () => ({
@@ -161,8 +172,6 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
   };
 
   const formatMajor = (majorValue) => {
-    if (!majorValue) return "Not Specified";
-    
     const majorMap = {
       computer_science: "Computer Science",
       biology: "Biology",
@@ -175,27 +184,244 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
       psychology: "Psychology",
       medicine: "Medicine",
       arts: "Arts",
-      other: "Other"
+      other: "Other",
     };
-
-    return majorMap[majorValue] || majorValue
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+    return majorMap[majorValue] || majorValue || "Not specified";
   };
 
   const formatEducation = (educationValue) => {
-    if (!educationValue) return "Not Specified";
-
     const educationMap = {
       high_school: "High School",
-      bachelors: "Bachelor's Degree",
-      masters: "Master's Degree",
-      phd: "Ph.D.",
-      other: "Other"
+      bachelors: "Bachelor's",
+      masters: "Master's",
+      phd: "PhD",
+      other: "Other",
     };
+    return educationMap[educationValue] || educationValue || "Not specified";
+  };
 
-    return educationMap[educationValue] || educationValue;
+  const formatStudyPreference = (preference) => {
+    const preferenceMap = {
+      morning: "Morning Person",
+      evening: "Evening Person",
+      flexible: "Flexible",
+      night: "Night Owl",
+    };
+    return preferenceMap[preference] || preference || "Not specified";
+  };
+
+  const showUserProfile = (user) => {
+    setSelectedUser(user);
+    setProfileModalVisible(true);
+  };
+
+  const renderDetailedProfile = (user) => {
+    if (!user) return null;
+
+    return (
+      <div className="detailed-profile">
+        <div className="profile-header">
+          <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
+          <Title level={2}>{user.name}</Title>
+          <Text type="secondary">{user.email}</Text>
+        </div>
+
+        <Divider />
+
+        <Descriptions title="Academic Information" bordered>
+          <Descriptions.Item label="Major" span={3}>
+            {formatMajor(user.major)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Education Level" span={3}>
+            {formatEducation(user.education)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Study Preference" span={3}>
+            {formatStudyPreference(user.studyPreference)}
+          </Descriptions.Item>
+        </Descriptions>
+
+        <Divider />
+
+        <Title level={4}>
+          <TeamOutlined /> Interests
+        </Title>
+        <div className="tag-container">
+          {user.interests?.map((interest, index) => (
+            <Tag key={index} color="green" style={{ margin: '4px' }}>
+              {interest}
+            </Tag>
+          ))}
+        </div>
+
+        <Divider />
+
+        <Title level={4}>
+          <TrophyOutlined /> Hobbies
+        </Title>
+        <div className="tag-container">
+          {user.hobbies?.map((hobby, index) => (
+            <Tag key={index} color="orange" style={{ margin: '4px' }}>
+              {hobby}
+            </Tag>
+          ))}
+        </div>
+
+        {user.bio && (
+          <>
+            <Divider />
+            <Title level={4}>About Me</Title>
+            <Paragraph>{user.bio}</Paragraph>
+          </>
+        )}
+
+        {user.achievements && user.achievements.length > 0 && (
+          <>
+            <Divider />
+            <Title level={4}>
+              <TrophyOutlined /> Achievements
+            </Title>
+            <List
+              dataSource={user.achievements}
+              renderItem={(achievement) => (
+                <List.Item>
+                  <Text>{achievement}</Text>
+                </List.Item>
+              )}
+            />
+          </>
+        )}
+
+        {user.statistics && (
+          <>
+            <Divider />
+            <Title level={4}>Study Statistics</Title>
+            <Descriptions bordered>
+              <Descriptions.Item label="Total Study Hours">
+                {user.statistics.totalHours || 0} hours
+              </Descriptions.Item>
+              <Descriptions.Item label="Completed Tasks">
+                {user.statistics.completedTasks || 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="Study Streak">
+                {user.statistics.studyStreak || 0} days
+              </Descriptions.Item>
+            </Descriptions>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderUserCard = (user, matchPercentage, onAddFriend) => {
+    const isOnline = user.statistics?.lastActive
+      ? isUserOnline(user.statistics.lastActive)
+      : false;
+
+    return (
+      <Card 
+        className="recommended-friend-card"
+        hoverable
+        onClick={() => showUserProfile(user)}
+        actions={[
+          <Button
+            type="primary"
+            icon={<UserAddOutlined />}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent card click when clicking button
+              onAddFriend(user._id);
+            }}
+          >
+            Add Friend
+          </Button>
+        ]}
+      >
+        <Card.Meta
+          avatar={
+            <Badge
+              dot
+              status={isOnline ? "success" : "default"}
+              offset={[-4, 36]}
+            >
+              <Avatar size={64}>{user.name ? user.name[0] : "U"}</Avatar>
+            </Badge>
+          }
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                {user.name}
+                {isOnline && (
+                  <Tag color="success" style={{ marginLeft: 8 }}>Online</Tag>
+                )}
+              </div>
+              <Progress
+                type="circle"
+                percent={Math.round(matchPercentage)}
+                width={40}
+                format={(percent) => `${percent}%`}
+                status={
+                  matchPercentage >= 75 ? "success" :
+                  matchPercentage >= 50 ? "normal" :
+                  "exception"
+                }
+              />
+            </div>
+          }
+          description={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <div style={{ color: '#666' }}>{user.email}</div>
+                {!isOnline && user.statistics?.lastActive && (
+                  <div style={{ color: '#888', fontSize: '12px' }}>
+                    <ClockCircleOutlined style={{ marginRight: 5 }} />
+                    Last active: {formatLastActive(user.statistics.lastActive)}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                {user.major && (
+                  <Tag color="blue">
+                    <BookOutlined /> {formatMajor(user.major)}
+                  </Tag>
+                )}
+                {user.education && (
+                  <Tag color="cyan">
+                    {formatEducation(user.education)}
+                  </Tag>
+                )}
+                {user.studyPreference && (
+                  <Tag color="purple">
+                    {formatStudyPreference(user.studyPreference)}
+                  </Tag>
+                )}
+              </div>
+
+              {user.interests && user.interests.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 500, marginBottom: '4px' }}>Interests:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {user.interests.map((interest, index) => (
+                      <Tag key={index} color="green">{interest}</Tag>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {user.hobbies && user.hobbies.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 500, marginBottom: '4px' }}>Hobbies:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {user.hobbies.map((hobby, index) => (
+                      <Tag key={index} color="orange">{hobby}</Tag>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          }
+        />
+      </Card>
+    );
   };
 
   if (loading) {
@@ -228,125 +454,87 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
   }
 
   return (
-    <div className="recommended-friends">
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
-          <Title level={4}>
-            <FilterOutlined style={{ color: '#1890ff', marginRight: 8 }} />
-            Study Mate Recommendations
-          </Title>
-        </Col>
-        <Col>
-          <Space size="middle">
-            <Input
-              placeholder="Search by name, major, or interests"
-              prefix={<SearchOutlined />}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 250 }}
-              allowClear
-            />
-            <Select
-              defaultValue="all"
-              style={{ width: 150 }}
-              onChange={setFilterCriteria}
-            >
-              <Option value="all">All Matches</Option>
-              <Option value="high">High Match (≥75%)</Option>
-              <Option value="medium">Medium Match (50-74%)</Option>
-              <Option value="low">Low Match (&lt;50%)</Option>
-            </Select>
-          </Space>
-        </Col>
-      </Row>
+    <div className="recommended-friends-container">
+      <div className="recommended-friends-header">
+        <Title level={4}>Recommended Friends</Title>
+        <Space>
+          <Select
+            value={filterCriteria}
+            onChange={setFilterCriteria}
+            style={{ width: 120 }}
+            placeholder="Filter by"
+          >
+            <Option value="all">All</Option>
+            <Option value="high">High Match (75%+)</Option>
+            <Option value="medium">Medium Match (50-74%)</Option>
+            <Option value="low">Low Match (&lt;50%)</Option>
+          </Select>
+          <Input
+            placeholder="Search by name or field"
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 200 }}
+            allowClear
+          />
+        </Space>
+      </div>
 
-      <Row style={{ marginBottom: 16 }}>
-        <Col>
-          <Text type="secondary">
-            Showing {displayedRecommendations.length} potential study mates
-          </Text>
-        </Col>
-      </Row>
-      
-      <List
-        grid={{
-          gutter: [24, 24],
-          xs: 1,
-          sm: 2,
-          md: 3,
-          lg: 3,
-          xl: 4,
-          xxl: 4,
-        }}
-        dataSource={displayedRecommendations}
-        renderItem={(recommendation) => (
-          <List.Item>
-            <Card
-              hoverable
-              className="friend-card"
-              style={{ height: "100%" }}
-            >
-              <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                <Progress
-                  type="circle"
-                  percent={Math.round(recommendation.matchPercentage)}
-                  strokeColor={getMatchColor(recommendation.matchPercentage)}
-                  size={80}
-                  format={(percent) => (
-                    <div className="match-percentage">
-                      <div>{Math.round(percent)}%</div>
-                      <div className="match-label">Match</div>
-                    </div>
-                  )}
-                />
-              </div>
+      {loading ? (
+        <div className="loading-container">
+          <Spin size="large" />
+        </div>
+      ) : displayedRecommendations.length > 0 ? (
+        <Row gutter={[16, 16]}>
+          {displayedRecommendations.map((recommendation) => (
+            <Col xs={24} sm={24} md={12} lg={8} xl={8} key={recommendation.user._id}>
+              {renderUserCard(
+                recommendation.user,
+                recommendation.matchPercentage,
+                handleSendRequest
+              )}
+            </Col>
+          ))}
+        </Row>
+      ) : (
+        <Empty
+          description={
+            <span>
+              No recommended friends found
+              {searchText && " matching your search"}
+              {filterCriteria !== "all" && " with selected match criteria"}
+            </span>
+          }
+        />
+      )}
 
-              <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                <Avatar
-                  size={64}
-                  icon={<UserOutlined />}
-                  src={recommendation.user.profileImage}
-                />
-                <Title level={5} style={{ margin: "12px 0 4px" }}>
-                  {recommendation.user.name}
-                </Title>
-                <Text type="secondary">
-                  <BookOutlined /> {formatMajor(recommendation.user.major)}
-                </Text>
-              </div>
-
-              <div style={{ marginBottom: "16px", textAlign: "center" }}>
-                {recommendation.user.interests?.slice(0, 3).map((interest, index) => (
-                  <Tag 
-                    color="blue" 
-                    key={index} 
-                    style={{ margin: "0 4px 4px 0" }}
-                  >
-                    {interest}
-                  </Tag>
-                ))}
-                {(!recommendation.user.interests || recommendation.user.interests.length === 0) && (
-                  <Text type="secondary">No interests specified</Text>
-                )}
-              </div>
-
-              <div style={{ marginBottom: "16px", textAlign: "center" }}>
-                <Text type="secondary">
-                  <EnvironmentOutlined /> {formatEducation(recommendation.user.education)}
-                </Text>
-              </div>
-
-              <Button
-                type="primary"
-                icon={<UserAddOutlined />}
-                block
-                onClick={() => handleSendRequest(recommendation.user._id)}
-              >
-                Connect
-              </Button>
-            </Card>
-          </List.Item>
-        )}
-      />
+      <Modal
+        title="User Profile"
+        open={profileModalVisible}
+        onCancel={() => setProfileModalVisible(false)}
+        width={800}
+        footer={[
+          <Button 
+            key="close" 
+            onClick={() => setProfileModalVisible(false)}
+          >
+            Close
+          </Button>,
+          <Button
+            key="add"
+            type="primary"
+            icon={<UserAddOutlined />}
+            onClick={() => {
+              handleSendRequest(selectedUser._id);
+              setProfileModalVisible(false);
+            }}
+          >
+            Add Friend
+          </Button>
+        ]}
+      >
+        {renderDetailedProfile(selectedUser)}
+      </Modal>
     </div>
   );
 });

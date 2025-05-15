@@ -23,7 +23,10 @@ const friendRequestSchema = new mongoose.Schema({
 });
 
 // Ensure a user can't send multiple pending requests to the same receiver
-friendRequestSchema.index({ sender: 1, receiver: 1 }, { unique: true });
+friendRequestSchema.index(
+  { sender: 1, receiver: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: 'pending' } }
+);
 
 const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
 

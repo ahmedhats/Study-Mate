@@ -61,4 +61,109 @@
   border-radius: 6px;
   height: 36px;
   font-weight: 500;
+}
+
+.recommended-friends-container {
+  padding: 24px;
+}
+
+.recommended-friends-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.recommended-friend-card {
+  height: 100%;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.recommended-friend-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.ant-card-meta-description {
+  margin-top: 12px;
+}
+
+.ant-tag {
+  margin: 0;
+}
+
+.ant-progress-circle .ant-progress-text {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Detailed Profile Styles */
+.detailed-profile {
+  padding: 20px;
+}
+
+.profile-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.profile-header .ant-avatar {
+  margin-bottom: 16px;
+}
+
+.profile-header .ant-typography {
+  margin: 0;
+}
+
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.detailed-profile .ant-descriptions {
+  margin-top: 16px;
+}
+
+.detailed-profile .ant-divider {
+  margin: 24px 0;
+}
+
+.detailed-profile .ant-typography + .ant-typography {
+  margin-top: 16px;
+}
+
+/* Make the modal scrollable if content is too long */
+.ant-modal-body {
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 16px 24px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .recommended-friends-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .recommended-friends-container {
+    padding: 16px;
+  }
+
+  .detailed-profile {
+    padding: 12px;
+  }
 } 

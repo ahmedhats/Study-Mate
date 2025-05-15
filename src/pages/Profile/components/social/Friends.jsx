@@ -13,6 +13,7 @@ import {
   message,
   Divider,
   notification,
+  Descriptions,
 } from "antd";
 import {
   UserAddOutlined,
@@ -21,6 +22,9 @@ import {
   CheckOutlined,
   UserDeleteOutlined,
   ClockCircleOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import {
   getUserFriends,
@@ -37,9 +41,11 @@ import {
   formatLastActive,
   isUserOnline,
 } from "../../../../utils/dateFormatter";
+import { Typography } from "antd";
 
 const { TabPane } = Tabs;
 const { Search } = Input;
+const { Title, Text, Paragraph } = Typography;
 
 const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const [activeKey, setActiveKey] = useState("myFriends");
@@ -50,6 +56,8 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // Expose fetchFriendsData through ref
   useImperativeHandle(ref, () => ({
@@ -310,6 +318,131 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
     return majorMap[majorValue] || majorValue;
   };
 
+  // Helper function to format the education value
+  const formatEducation = (educationValue) => {
+    const educationMap = {
+      high_school: "High School",
+      bachelors: "Bachelor's",
+      masters: "Master's",
+      phd: "PhD",
+      other: "Other",
+    };
+    return educationMap[educationValue] || educationValue || "Not specified";
+  };
+
+  // Helper function to format study preference
+  const formatStudyPreference = (preference) => {
+    const preferenceMap = {
+      morning: "Morning Person",
+      evening: "Evening Person",
+      flexible: "Flexible",
+      night: "Night Owl",
+    };
+    return preferenceMap[preference] || preference || "Not specified";
+  };
+
+  const showUserProfile = (user) => {
+    setSelectedUser(user);
+    setProfileModalVisible(true);
+  };
+
+  const renderDetailedProfile = (user) => {
+    if (!user) return null;
+
+    return (
+      <div className="detailed-profile">
+        <div className="profile-header">
+          <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
+          <Title level={2}>{user.name}</Title>
+          <Text type="secondary">{user.email}</Text>
+        </div>
+
+        <Divider />
+
+        <Descriptions title="Academic Information" bordered>
+          <Descriptions.Item label="Major" span={3}>
+            {formatMajor(user.major)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Education Level" span={3}>
+            {formatEducation(user.education)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Study Preference" span={3}>
+            {formatStudyPreference(user.studyPreference)}
+          </Descriptions.Item>
+        </Descriptions>
+
+        <Divider />
+
+        <Title level={4}>
+          <TeamOutlined /> Interests
+        </Title>
+        <div className="tag-container">
+          {user.interests?.map((interest, index) => (
+            <Tag key={index} color="green" style={{ margin: '4px' }}>
+              {interest}
+            </Tag>
+          ))}
+        </div>
+
+        <Divider />
+
+        <Title level={4}>
+          <TrophyOutlined /> Hobbies
+        </Title>
+        <div className="tag-container">
+          {user.hobbies?.map((hobby, index) => (
+            <Tag key={index} color="orange" style={{ margin: '4px' }}>
+              {hobby}
+            </Tag>
+          ))}
+        </div>
+
+        {user.bio && (
+          <>
+            <Divider />
+            <Title level={4}>About Me</Title>
+            <Paragraph>{user.bio}</Paragraph>
+          </>
+        )}
+
+        {user.achievements && user.achievements.length > 0 && (
+          <>
+            <Divider />
+            <Title level={4}>
+              <TrophyOutlined /> Achievements
+            </Title>
+            <List
+              dataSource={user.achievements}
+              renderItem={(achievement) => (
+                <List.Item>
+                  <Text>{achievement}</Text>
+                </List.Item>
+              )}
+            />
+          </>
+        )}
+
+        {user.statistics && (
+          <>
+            <Divider />
+            <Title level={4}>Study Statistics</Title>
+            <Descriptions bordered>
+              <Descriptions.Item label="Total Study Hours">
+                {user.statistics.totalHours || 0} hours
+              </Descriptions.Item>
+              <Descriptions.Item label="Completed Tasks">
+                {user.statistics.completedTasks || 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="Study Streak">
+                {user.statistics.studyStreak || 0} days
+              </Descriptions.Item>
+            </Descriptions>
+          </>
+        )}
+      </div>
+    );
+  };
+
   // Render user item for the list
   const renderUserItem = (user, actions) => {
     const isOnline = user.statistics?.lastActive
@@ -317,7 +450,11 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
       : false;
 
     return (
-      <List.Item actions={actions}>
+      <List.Item 
+        actions={actions}
+        className="friend-list-item"
+        onClick={() => showUserProfile(user)}
+      >
         <List.Item.Meta
           avatar={
             <Badge
@@ -325,27 +462,41 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
               status={isOnline ? "success" : "default"}
               offset={[-4, 36]}
             >
-              <Avatar>{user.name ? user.name[0] : "U"}</Avatar>
+              <Avatar size={64}>{user.name ? user.name[0] : "U"}</Avatar>
             </Badge>
           }
-          title={user.name}
-          description={
-            <div>
-              <div>{user.email}</div>
-              {user.major && <div>Field: {formatMajor(user.major)}</div>}
-              {user.statistics?.lastActive && (
-                <div className="last-active">
-                  {isOnline ? (
-                    "Online now"
-                  ) : (
-                    <>
-                      <ClockCircleOutlined style={{ marginRight: 5 }} />
-                      Last active:{" "}
-                      {formatLastActive(user.statistics.lastActive)}
-                    </>
-                  )}
-                </div>
+          title={
+            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+              {user.name}
+              {isOnline && (
+                <Tag color="success" style={{ marginLeft: 8 }}>Online</Tag>
               )}
+            </div>
+          }
+          description={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <div style={{ color: '#666' }}>{user.email}</div>
+                {!isOnline && user.statistics?.lastActive && (
+                  <div style={{ color: '#888', fontSize: '12px' }}>
+                    <ClockCircleOutlined style={{ marginRight: 5 }} />
+                    Last active: {formatLastActive(user.statistics.lastActive)}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                {user.major && (
+                  <Tag color="blue">
+                    <BookOutlined /> {formatMajor(user.major)}
+                  </Tag>
+                )}
+                {user.education && (
+                  <Tag color="cyan">
+                    {formatEducation(user.education)}
+                  </Tag>
+                )}
+              </div>
             </div>
           }
         />
@@ -517,6 +668,23 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         )}
+      </Modal>
+
+      <Modal
+        title="User Profile"
+        open={profileModalVisible}
+        onCancel={() => setProfileModalVisible(false)}
+        width={800}
+        footer={[
+          <Button 
+            key="close" 
+            onClick={() => setProfileModalVisible(false)}
+          >
+            Close
+          </Button>
+        ]}
+      >
+        {renderDetailedProfile(selectedUser)}
       </Modal>
     </div>
   );
