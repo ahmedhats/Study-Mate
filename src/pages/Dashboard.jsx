@@ -11,6 +11,12 @@ import { getUserProfile } from "../services/api/userService";
 import StudyStats from "../components/features/dashboard/StudyStats";
 import RecentActivity from "../components/features/dashboard/RecentActivity";
 import ProfileModal from "../components/features/dashboard/ProfileModal";
+import {
+  formatEducation,
+  formatMajor,
+  formatStudyPreference,
+  formatArrayData,
+} from "../utils/formatters";
 import "../styles/Dashboard.css";
 
 const { Content } = Layout;
@@ -46,9 +52,10 @@ const Dashboard = () => {
     email: "",
     education: "",
     major: "",
-    interests: "",
-    hobbies: "",
+    interests: [],
+    hobbies: [],
     studyPreference: "",
+    studyGoals: "",
     studyStats: {
       totalHours: 0,
       completedTasks: 0,
@@ -91,7 +98,13 @@ const Dashboard = () => {
       <Content className="dashboard-content">
         <div className="dashboard-container">
           <div className="welcome-header">
-            <h1>Welcome back, {displayUserData.name.split(" ")[0]}!</h1>
+            <h1>
+              Welcome back,{" "}
+              {displayUserData.name
+                ? displayUserData.name.split(" ")[0]
+                : "User"}
+              !
+            </h1>
             <Button
               type="primary"
               icon={<SettingOutlined />}
@@ -124,40 +137,31 @@ const Dashboard = () => {
               <div className="detail-item">
                 <span className="label">Education Level:</span>
                 <span className="value">
-                  {displayUserData.education || "Not specified"}
+                  {formatEducation(displayUserData.education)}
                 </span>
               </div>
               <div className="detail-item">
                 <span className="label">Field of Study:</span>
                 <span className="value">
-                  {displayUserData.major || "Not specified"}
+                  {formatMajor(displayUserData.major)}
                 </span>
               </div>
               <div className="detail-item">
                 <span className="label">Interests:</span>
                 <span className="value">
-                  {displayUserData.interests &&
-                  displayUserData.interests.length > 0
-                    ? Array.isArray(displayUserData.interests)
-                      ? displayUserData.interests.join(", ")
-                      : displayUserData.interests
-                    : "Not specified"}
+                  {formatArrayData(displayUserData.interests)}
                 </span>
               </div>
               <div className="detail-item">
                 <span className="label">Hobbies:</span>
                 <span className="value">
-                  {displayUserData.hobbies && displayUserData.hobbies.length > 0
-                    ? Array.isArray(displayUserData.hobbies)
-                      ? displayUserData.hobbies.join(", ")
-                      : displayUserData.hobbies
-                    : "Not specified"}
+                  {formatArrayData(displayUserData.hobbies)}
                 </span>
               </div>
               <div className="detail-item">
                 <span className="label">Study Preference:</span>
                 <span className="value">
-                  {displayUserData.studyPreference || "Not specified"}
+                  {formatStudyPreference(displayUserData.studyPreference)}
                 </span>
               </div>
             </div>

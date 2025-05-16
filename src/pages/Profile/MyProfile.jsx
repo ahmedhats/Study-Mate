@@ -28,6 +28,12 @@ import {
 import EditProfileModal from "./components/EditProfileModal";
 import { getUserProfile } from "../../services/api/userService";
 import { formatLastActive } from "../../utils/dateFormatter";
+import {
+  formatEducation,
+  formatMajor,
+  formatStudyPreference,
+  formatArrayData,
+} from "../../utils/formatters";
 
 const MyProfile = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -119,47 +125,6 @@ const MyProfile = () => {
   const workItems = displayUserData.workItems || [];
   const assignedTasks = displayUserData.assignedTasks || [];
   const calendarEvents = displayUserData.calendarEvents || [];
-
-  // Helper function to format education value
-  const formatEducation = (educationValue) => {
-    const educationMap = {
-      high_school: "High School",
-      bachelors: "Bachelor's",
-      masters: "Master's",
-      phd: "PhD",
-      other: "Other",
-    };
-    return educationMap[educationValue] || educationValue || "Not specified";
-  };
-
-  // Helper function to format major value
-  const formatMajor = (majorValue) => {
-    const majorMap = {
-      computer_science: "Computer Science",
-      biology: "Biology",
-      engineering: "Engineering",
-      mathematics: "Mathematics",
-      business: "Business",
-      literature: "Literature",
-      physics: "Physics",
-      chemistry: "Chemistry",
-      psychology: "Psychology",
-      medicine: "Medicine",
-      arts: "Arts",
-      other: "Other",
-    };
-    return majorMap[majorValue] || majorValue || "Not specified";
-  };
-
-  // Helper function to format study preference
-  const formatStudyPreference = (preference) => {
-    const preferenceMap = {
-      individual: "Individual Study",
-      group: "Group Study",
-      both: "Both Individual & Group",
-    };
-    return preferenceMap[preference] || preference || "Not specified";
-  };
 
   const getEventTypeColor = (type) => {
     const colors = {

@@ -112,14 +112,31 @@ const ProfileSetup = () => {
       setCheckingAuth(false);
 
       // Pre-fill form with existing user data if available
+      const interestsArray = Array.isArray(user.interests)
+        ? user.interests
+        : user.interests
+        ? [user.interests]
+        : [];
+      const hobbiesArray = Array.isArray(user.hobbies)
+        ? user.hobbies
+        : user.hobbies
+        ? [user.hobbies]
+        : [];
+
       form.setFieldsValue({
         education: user.education || "",
         major: user.major || "",
-        interests: user.interests || [],
-        hobbies: user.hobbies || [],
+        interests: interestsArray,
+        hobbies: hobbiesArray,
         studyPreference: user.studyPreference || "",
         studyGoals: user.studyGoals || "",
       });
+
+      // Set custom field display state based on values
+      setShowCustomEducation(user.education === "other");
+      setShowCustomMajor(user.major === "other");
+      setShowCustomInterest(interestsArray.includes("Other"));
+      setShowCustomHobby(hobbiesArray.includes("Other"));
     } catch (err) {
       console.error("Error parsing user data:", err);
       message.error("An error occurred. Please login again.");
