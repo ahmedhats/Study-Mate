@@ -34,6 +34,10 @@ const VerifyEmail = React.lazy(() => import("./pages/auth/VerifyEmail"));
 const CommunityDetailPage = React.lazy(() =>
   import("./pages/CommunityDetailPage")
 );
+const StudySession = React.lazy(() => import("./pages/StudySession"));
+const AgoraStudyRoom = React.lazy(() =>
+  import("./components/features/studySessions/AgoraStudyRoom")
+);
 
 const { Content } = Layout;
 
@@ -369,6 +373,30 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <CommunityDetailPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Study Sessions route */}
+            <Route
+              path="/study-sessions"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <StudySession />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Study Session Room route */}
+            <Route
+              path="/study-session/:sessionId"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <AgoraStudyRoom />
                   </MainLayout>
                 </ProtectedRoute>
               }

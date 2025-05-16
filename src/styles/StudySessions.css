@@ -1,0 +1,133 @@
+/* StudySessions.css - Styles for study sessions components */
+
+/* Session list page styles */
+.session-page {
+  padding: 24px;
+}
+
+.session-card {
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.session-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.session-title {
+  margin-bottom: 8px !important;
+  font-weight: 600;
+}
+
+.session-description {
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* Session room styles */
+.session-room {
+  padding: 16px;
+}
+
+.video-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  min-height: 240px;
+}
+
+.video-container video {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.video-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.video-container:hover .video-controls {
+  opacity: 1;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.chat-input {
+  padding: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.message-bubble.sent {
+  background-color: #1890ff;
+  color: white;
+  align-self: flex-end;
+}
+
+.message-bubble.received {
+  background-color: #f0f0f0;
+  color: rgba(0, 0, 0, 0.85);
+  align-self: flex-start;
+}
+
+.message-meta {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .video-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .session-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .video-controls {
+    opacity: 1;
+  }
+}
