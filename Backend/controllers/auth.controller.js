@@ -6,6 +6,9 @@ const {
 } = require("../utils/templates/verifyEmail.template");
 const { sendEmail } = require("../utils/sendEmail");
 const crypto = require("crypto");
+const { OAuth2Client } = require('google-auth-library');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 module.exports.register = async (req, res) => {
   const { username, name, email, password, birthDate } = req.body;
@@ -189,5 +192,58 @@ module.exports.resetPassword = async (req, res) => {
       success: false,
       message: "Error resetting password",
     });
+  }
+};
+
+module.exports.googleLogin = async (req, res) => {
+  const { idToken } = req.body;
+  console.log("Received Google login request with idToken:", !!idToken);
+  if (!idToken) {
+    console.log("No idToken provided");
+    return res.status(400).json({ success: false, message: 'No ID token provided' });
+  }
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    console.log("Google token payload:", payload);
+    const email = payload.email;
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        email,
+        name: payload.name || '',
+        username: email.split('@')[0],
+        isAccountVerified: true,
+        password: '', // No password for Google users
+        profileCompleted: false,
+      });
+    }
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return res.status(200).json({
+      success: true,
+      message: 'Google login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isAccountVerified: user.isAccountVerified,
+        profileCompleted: user.profileCompleted || false,
+      },
+    });
+  } catch (error) {
+    console.error('Google login error:', error.message, error);
+    return res.status(401).json({ success: false, message: 'Invalid Google token' });
   }
 };

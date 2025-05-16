@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { message } from "antd";
 import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import { login } from "../../services/api/authService";
+import { googleLogin } from "../../services/api/authService";
+import { googleSignIn } from "../../utils/googleSignIn";
 import "../../styles/Auth.css";
 
 const Login = () => {
@@ -182,6 +184,43 @@ const Login = () => {
     message.info(`${provider} sign-in will be available soon!`);
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      console.log("Google Client ID:", process.env.REACT_APP_GOOGLE_CLIENT_ID);
+      const idToken = await googleSignIn(
+        process.env.REACT_APP_GOOGLE_CLIENT_ID
+      );
+      const response = await googleLogin(idToken);
+      if (response.success) {
+        message.success("Google login successful!");
+        const userData = {
+          token: response.token,
+          user: {
+            ...response.user,
+            isAccountVerified: response.user.isAccountVerified === true,
+            profileCompleted: response.user.profileCompleted === true,
+          },
+        };
+        localStorage.setItem("userData", JSON.stringify(userData));
+        setTimeout(() => {
+          if (response.user && response.user.profileCompleted !== true) {
+            navigate("/profile-setup", { replace: true });
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
+        }, 300);
+      } else {
+        showLoginError(response.message);
+      }
+    } catch (error) {
+      const msg = error.message || error.response?.data?.message;
+      showLoginError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -266,7 +305,7 @@ const Login = () => {
           <div className="social-signin">
             <button
               className="social-button google-button"
-              onClick={() => handleSocialSignin("Google")}
+              onClick={handleGoogleSignIn}
               disabled={loading}
             >
               <img src="/google-icon.svg" alt="Google" /> Google

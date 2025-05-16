@@ -70,3 +70,13 @@ export const resetPassword = async (token, newPassword) => {
     throw error.response?.data || { message: "Password reset failed" };
   }
 };
+
+export const googleLogin = async (idToken) => {
+  try {
+    const response = await axiosInstance.post("/auth/google", { idToken });
+    return response.data;
+  } catch (error) {
+    console.error("Google Login API error:", error);
+    throw error.response?.data || { message: "Google login failed" };
+  }
+};
