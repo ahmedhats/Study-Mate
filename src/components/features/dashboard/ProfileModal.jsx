@@ -12,16 +12,41 @@ const ProfileModal = ({ visible, onCancel, onFinish, initialValues }) => {
   // Reset form when visible changes or initialValues update
   useEffect(() => {
     if (visible && initialValues) {
-      form.setFieldsValue(initialValues);
+      // Prepare form values making sure arrays are properly handled
+      const formValues = {
+        ...initialValues,
+        // Convert interests to array if it's not already
+        interests:
+          initialValues.interests && Array.isArray(initialValues.interests)
+            ? initialValues.interests
+            : initialValues.interests
+            ? [initialValues.interests]
+            : [],
+        // Convert hobbies to array if it's not already
+        hobbies:
+          initialValues.hobbies && Array.isArray(initialValues.hobbies)
+            ? initialValues.hobbies
+            : initialValues.hobbies
+            ? [initialValues.hobbies]
+            : [],
+      };
+
+      form.setFieldsValue(formValues);
     }
   }, [visible, initialValues, form]);
 
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
-      await updateUserProfile(values);
+      // Set profileCompleted flag to ensure it's properly saved
+      const updatedValues = {
+        ...values,
+        profileCompleted: true,
+      };
+
+      await updateUserProfile(updatedValues);
       message.success("Profile updated successfully");
-      onFinish(values);
+      onFinish(updatedValues);
       form.resetFields();
     } catch (error) {
       console.error("Profile update error:", error);
@@ -84,6 +109,7 @@ const ProfileModal = ({ visible, onCancel, onFinish, initialValues }) => {
             <Option value="bachelors">Bachelor's</Option>
             <Option value="masters">Master's</Option>
             <Option value="phd">PhD</Option>
+            <Option value="other">Other</Option>
           </Select>
         </Form.Item>
 
@@ -106,6 +132,7 @@ const ProfileModal = ({ visible, onCancel, onFinish, initialValues }) => {
             <Option value="psychology">Psychology</Option>
             <Option value="medicine">Medicine</Option>
             <Option value="arts">Arts</Option>
+            <Option value="other">Other</Option>
           </Select>
         </Form.Item>
 

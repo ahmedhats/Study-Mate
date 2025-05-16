@@ -40,22 +40,35 @@ const EditProfileModal = ({
 
       // Force a small delay to ensure modal is fully rendered before setting values
       setTimeout(() => {
-        form.setFieldsValue({
+        // Prepare form values with proper array handling
+        const formValues = {
           name: userData.name || "",
           email: userData.email || "",
           education: userData.education || "",
           major: userData.major || "",
-          interests: userData.interests || [],
-          hobbies: userData.hobbies || [],
+          // Ensure interests is always an array
+          interests: Array.isArray(userData.interests)
+            ? userData.interests
+            : userData.interests
+            ? [userData.interests]
+            : [],
+          // Ensure hobbies is always an array
+          hobbies: Array.isArray(userData.hobbies)
+            ? userData.hobbies
+            : userData.hobbies
+            ? [userData.hobbies]
+            : [],
           studyPreference: userData.studyPreference || "",
           studyGoals: userData.studyGoals || "",
-        });
+        };
+
+        form.setFieldsValue(formValues);
 
         // Check if we need to show custom fields
         setShowCustomEducation(userData.education === "other");
         setShowCustomMajor(userData.major === "other");
-        setShowCustomInterest((userData.interests || []).includes("Other"));
-        setShowCustomHobby((userData.hobbies || []).includes("Other"));
+        setShowCustomInterest((formValues.interests || []).includes("Other"));
+        setShowCustomHobby((formValues.hobbies || []).includes("Other"));
       }, 100);
     }
   }, [visible, userData, form]);
@@ -94,6 +107,8 @@ const EditProfileModal = ({
         major,
         interests,
         hobbies,
+        // Important: ensure profileCompleted is set to true
+        profileCompleted: true,
       };
 
       // Call the API to update the profile
@@ -198,7 +213,6 @@ const EditProfileModal = ({
           layout="vertical"
           onFinish={handleSubmit}
           className="profile-edit-form"
-          preserve={false}
         >
           <Form.Item
             name="name"
