@@ -11,6 +11,7 @@ import Sidebar from "./components/layout/sidebar";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import ActivityTracker from "./components/common/ActivityTracker";
 import "./styles/App.css";
+import DirectVideoTest from "./components/features/studySessions/DirectVideoTest";
 
 // Lazy load all components
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
@@ -218,6 +219,14 @@ const App = () => {
               element={
                 <AuthLayout>
                   <ProfileSetup />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/video-test"
+              element={
+                <AuthLayout>
+                  <DirectVideoTest />
                 </AuthLayout>
               }
             />

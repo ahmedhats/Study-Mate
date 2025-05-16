@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// Ensure consistent port 5001 usage for API
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001/api";
+// Ensure consistent port 5000 usage for API
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 // Mock data for when API calls fail
 const mockSessions = [
