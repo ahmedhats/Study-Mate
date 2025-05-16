@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   List,
   Avatar,
@@ -13,6 +13,7 @@ import {
   message,
   Divider,
   notification,
+  Descriptions,
 } from "antd";
 import {
   UserAddOutlined,
@@ -21,6 +22,9 @@ import {
   CheckOutlined,
   UserDeleteOutlined,
   ClockCircleOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import {
   getUserFriends,
@@ -31,16 +35,19 @@ import {
   removeFriend,
   getPendingRequests,
   getSentRequests,
+  cancelFriendRequest,
 } from "../../../../services/api/socialService";
 import {
   formatLastActive,
   isUserOnline,
 } from "../../../../utils/dateFormatter";
+import { Typography } from "antd";
 
 const { TabPane } = Tabs;
 const { Search } = Input;
+const { Title, Text, Paragraph } = Typography;
 
-const Friends = () => {
+const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const [activeKey, setActiveKey] = useState("myFriends");
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -49,6 +56,13 @@ const Friends = () => {
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+  // Expose fetchFriendsData through ref
+  useImperativeHandle(ref, () => ({
+    fetchFriendsData
+  }));
 
   // Load friends and requests on component mount
   useEffect(() => {
@@ -66,14 +80,14 @@ const Friends = () => {
       }
       setFriends(friendsResponse.data || []);
 
-      // Get pending friend requests
+      // Get pending requests
       const pendingResponse = await getPendingRequests();
       if (pendingResponse.error) {
         throw new Error(pendingResponse.error);
       }
       setPendingRequests(pendingResponse.data || []);
 
-      // Get sent friend requests
+      // Get sent requests
       const sentResponse = await getSentRequests();
       if (sentResponse.error) {
         throw new Error(sentResponse.error);
@@ -81,38 +95,11 @@ const Friends = () => {
       setSentRequests(sentResponse.data || []);
     } catch (error) {
       console.error("Error fetching friends data:", error);
-      message.error("Failed to load friends data");
-
-      // If API fails, use mock data temporarily for development
-      setFriends([
-        {
-          _id: "friend1",
-          name: "John Doe",
-          email: "john@example.com",
-          major: "computer_science",
-          statistics: { lastActive: new Date(Date.now() - 2 * 60000) },
-        },
-      ]);
-
-      setPendingRequests([
-        {
-          _id: "pending1",
-          name: "Alice Johnson",
-          email: "alice@example.com",
-          major: "computer_science",
-          statistics: { lastActive: new Date(Date.now() - 45 * 60000) },
-        },
-      ]);
-
-      setSentRequests([
-        {
-          _id: "sent1",
-          name: "Carol Williams",
-          email: "carol@example.com",
-          major: "mathematics",
-          statistics: { lastActive: new Date(Date.now() - 5 * 60000) },
-        },
-      ]);
+      notification.error({
+        message: "Failed to Load Friends Data",
+        description: error.message || "There was a problem loading your friends data.",
+        placement: "topRight",
+      });
     } finally {
       setLoading(false);
     }
@@ -206,38 +193,32 @@ const Friends = () => {
 
   const handleAcceptRequest = async (userId) => {
     try {
-      // Call the real API to accept a friend request
-      console.log("Accepting friend request from user:", userId);
-      const response = await acceptFriendRequest(userId);
+      // Find the friend request for this user
+      const request = pendingRequests.find(request => request.sender._id === userId);
+      if (!request) {
+        throw new Error("Friend request not found");
+      }
+
+      // Call the API to accept the request
+      const response = await acceptFriendRequest(request._id);
 
       if (response.error) {
         throw new Error(response.error);
       }
 
-      // Show success message
       notification.success({
         message: "Friend Request Accepted",
         description: "You are now friends!",
         placement: "topRight",
       });
 
-      // Move the user from pending requests to friends
-      const user = pendingRequests.find((user) => user._id === userId);
-      if (user) {
-        setFriends([...friends, user]);
-        setPendingRequests(
-          pendingRequests.filter((user) => user._id !== userId)
-        );
-      }
-
       // Refresh the friends list to ensure it's up to date
-      fetchFriendsData();
+      await fetchFriendsData();
     } catch (error) {
       console.error("Error accepting friend request:", error);
       notification.error({
         message: "Failed to Accept Request",
-        description:
-          error.message || "There was a problem accepting the friend request.",
+        description: error.message || "There was a problem accepting the friend request.",
         placement: "topRight",
       });
     }
@@ -245,21 +226,34 @@ const Friends = () => {
 
   const handleRejectRequest = async (userId) => {
     try {
-      // Call the real API to reject a friend request
-      console.log("Rejecting friend request from user:", userId);
-      const response = await rejectFriendRequest(userId);
+      // Find the friend request for this user
+      const request = pendingRequests.find(request => request.sender._id === userId);
+      if (!request) {
+        throw new Error("Friend request not found");
+      }
+
+      // Call the API to reject the request
+      const response = await rejectFriendRequest(request._id);
 
       if (response.error) {
         throw new Error(response.error);
       }
 
-      message.success("Friend request rejected");
+      notification.success({
+        message: "Friend Request Rejected",
+        description: "The friend request has been rejected.",
+        placement: "topRight",
+      });
 
-      // Update UI to reflect the change - remove from pending requests
-      setPendingRequests(pendingRequests.filter((user) => user._id !== userId));
+      // Refresh the friends list to ensure it's up to date
+      await fetchFriendsData();
     } catch (error) {
       console.error("Error rejecting friend request:", error);
-      message.error("Failed to reject friend request");
+      notification.error({
+        message: "Failed to Reject Request",
+        description: error.message || "There was a problem rejecting the friend request.",
+        placement: "topRight",
+      });
     }
   };
 
@@ -284,9 +278,7 @@ const Friends = () => {
 
   const handleCancelRequest = async (userId) => {
     try {
-      // In a real implementation, we would call an API to cancel the request
-      console.log("Canceling friend request to user:", userId);
-      const response = await rejectFriendRequest(userId);
+      const response = await cancelFriendRequest(userId);
 
       if (response.error) {
         throw new Error(response.error);
@@ -296,6 +288,11 @@ const Friends = () => {
 
       // Update UI to reflect the change
       setSentRequests(sentRequests.filter((user) => user._id !== userId));
+
+      // Notify parent component to refresh recommended friends
+      if (onFriendRequestCanceled) {
+        onFriendRequestCanceled();
+      }
     } catch (error) {
       console.error("Error canceling friend request:", error);
       message.error("Failed to cancel friend request");
@@ -321,6 +318,131 @@ const Friends = () => {
     return majorMap[majorValue] || majorValue;
   };
 
+  // Helper function to format the education value
+  const formatEducation = (educationValue) => {
+    const educationMap = {
+      high_school: "High School",
+      bachelors: "Bachelor's",
+      masters: "Master's",
+      phd: "PhD",
+      other: "Other",
+    };
+    return educationMap[educationValue] || educationValue || "Not specified";
+  };
+
+  // Helper function to format study preference
+  const formatStudyPreference = (preference) => {
+    const preferenceMap = {
+      morning: "Morning Person",
+      evening: "Evening Person",
+      flexible: "Flexible",
+      night: "Night Owl",
+    };
+    return preferenceMap[preference] || preference || "Not specified";
+  };
+
+  const showUserProfile = (user) => {
+    setSelectedUser(user);
+    setProfileModalVisible(true);
+  };
+
+  const renderDetailedProfile = (user) => {
+    if (!user) return null;
+
+    return (
+      <div className="detailed-profile">
+        <div className="profile-header">
+          <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
+          <Title level={2}>{user.name}</Title>
+          <Text type="secondary">{user.email}</Text>
+        </div>
+
+        <Divider />
+
+        <Descriptions title="Academic Information" bordered>
+          <Descriptions.Item label="Major" span={3}>
+            {formatMajor(user.major)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Education Level" span={3}>
+            {formatEducation(user.education)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Study Preference" span={3}>
+            {formatStudyPreference(user.studyPreference)}
+          </Descriptions.Item>
+        </Descriptions>
+
+        <Divider />
+
+        <Title level={4}>
+          <TeamOutlined /> Interests
+        </Title>
+        <div className="tag-container">
+          {user.interests?.map((interest, index) => (
+            <Tag key={index} color="green" style={{ margin: '4px' }}>
+              {interest}
+            </Tag>
+          ))}
+        </div>
+
+        <Divider />
+
+        <Title level={4}>
+          <TrophyOutlined /> Hobbies
+        </Title>
+        <div className="tag-container">
+          {user.hobbies?.map((hobby, index) => (
+            <Tag key={index} color="orange" style={{ margin: '4px' }}>
+              {hobby}
+            </Tag>
+          ))}
+        </div>
+
+        {user.bio && (
+          <>
+            <Divider />
+            <Title level={4}>About Me</Title>
+            <Paragraph>{user.bio}</Paragraph>
+          </>
+        )}
+
+        {user.achievements && user.achievements.length > 0 && (
+          <>
+            <Divider />
+            <Title level={4}>
+              <TrophyOutlined /> Achievements
+            </Title>
+            <List
+              dataSource={user.achievements}
+              renderItem={(achievement) => (
+                <List.Item>
+                  <Text>{achievement}</Text>
+                </List.Item>
+              )}
+            />
+          </>
+        )}
+
+        {user.statistics && (
+          <>
+            <Divider />
+            <Title level={4}>Study Statistics</Title>
+            <Descriptions bordered>
+              <Descriptions.Item label="Total Study Hours">
+                {user.statistics.totalHours || 0} hours
+              </Descriptions.Item>
+              <Descriptions.Item label="Completed Tasks">
+                {user.statistics.completedTasks || 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="Study Streak">
+                {user.statistics.studyStreak || 0} days
+              </Descriptions.Item>
+            </Descriptions>
+          </>
+        )}
+      </div>
+    );
+  };
+
   // Render user item for the list
   const renderUserItem = (user, actions) => {
     const isOnline = user.statistics?.lastActive
@@ -328,7 +450,11 @@ const Friends = () => {
       : false;
 
     return (
-      <List.Item actions={actions}>
+      <List.Item 
+        actions={actions}
+        className="friend-list-item"
+        onClick={() => showUserProfile(user)}
+      >
         <List.Item.Meta
           avatar={
             <Badge
@@ -336,27 +462,41 @@ const Friends = () => {
               status={isOnline ? "success" : "default"}
               offset={[-4, 36]}
             >
-              <Avatar>{user.name ? user.name[0] : "U"}</Avatar>
+              <Avatar size={64}>{user.name ? user.name[0] : "U"}</Avatar>
             </Badge>
           }
-          title={user.name}
-          description={
-            <div>
-              <div>{user.email}</div>
-              {user.major && <div>Field: {formatMajor(user.major)}</div>}
-              {user.statistics?.lastActive && (
-                <div className="last-active">
-                  {isOnline ? (
-                    "Online now"
-                  ) : (
-                    <>
-                      <ClockCircleOutlined style={{ marginRight: 5 }} />
-                      Last active:{" "}
-                      {formatLastActive(user.statistics.lastActive)}
-                    </>
-                  )}
-                </div>
+          title={
+            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+              {user.name}
+              {isOnline && (
+                <Tag color="success" style={{ marginLeft: 8 }}>Online</Tag>
               )}
+            </div>
+          }
+          description={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <div style={{ color: '#666' }}>{user.email}</div>
+                {!isOnline && user.statistics?.lastActive && (
+                  <div style={{ color: '#888', fontSize: '12px' }}>
+                    <ClockCircleOutlined style={{ marginRight: 5 }} />
+                    Last active: {formatLastActive(user.statistics.lastActive)}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                {user.major && (
+                  <Tag color="blue">
+                    <BookOutlined /> {formatMajor(user.major)}
+                  </Tag>
+                )}
+                {user.education && (
+                  <Tag color="cyan">
+                    {formatEducation(user.education)}
+                  </Tag>
+                )}
+              </div>
             </div>
           }
         />
@@ -424,18 +564,18 @@ const Friends = () => {
           ) : pendingRequests.length > 0 ? (
             <List
               dataSource={pendingRequests}
-              renderItem={(user) =>
-                renderUserItem(user, [
+              renderItem={(request) =>
+                renderUserItem(request.sender, [
                   <Button
                     type="primary"
                     icon={<CheckOutlined />}
-                    onClick={() => handleAcceptRequest(user._id)}
+                    onClick={() => handleAcceptRequest(request.sender._id)}
                   >
                     Accept
                   </Button>,
                   <Button
                     icon={<CloseOutlined />}
-                    onClick={() => handleRejectRequest(user._id)}
+                    onClick={() => handleRejectRequest(request.sender._id)}
                   >
                     Reject
                   </Button>,
@@ -529,8 +669,25 @@ const Friends = () => {
           />
         )}
       </Modal>
+
+      <Modal
+        title="User Profile"
+        open={profileModalVisible}
+        onCancel={() => setProfileModalVisible(false)}
+        width={800}
+        footer={[
+          <Button 
+            key="close" 
+            onClick={() => setProfileModalVisible(false)}
+          >
+            Close
+          </Button>
+        ]}
+      >
+        {renderDetailedProfile(selectedUser)}
+      </Modal>
     </div>
   );
-};
+});
 
 export default Friends;

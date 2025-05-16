@@ -1,6 +1,8 @@
 const User = require("../models/user.model");
+const FriendRequest = require("../models/friendRequest.model");
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
+const { executePythonScript } = require('../utils/pythonBridge');
 
 // Get user by ID
 module.exports.getUserById = async (req, res, next) => {
@@ -365,10 +367,10 @@ module.exports.getUserFriends = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Find the user and populate their friends list
+    // Find the user and populate their friends list with all relevant fields
     const user = await User.findById(userId).populate({
       path: "friends",
-      select: "_id name email major statistics.lastActive",
+      select: "_id name email major interests hobbies education studyPreference statistics.lastActive"
     });
 
     if (!user) {
@@ -398,25 +400,23 @@ module.exports.sendFriendRequest = async (req, res) => {
     const { userId } = req.body;
     const senderId = req.userId;
 
-    console.log("Friend request params:", { userId, senderId });
-
     if (!userId) {
       return res.status(400).json({
         success: false,
-        message: "User ID is required",
+        message: "User ID is required"
       });
     }
 
     // Check if users exist
     const [sender, receiver] = await Promise.all([
       User.findById(senderId),
-      User.findById(userId),
+      User.findById(userId)
     ]);
 
     if (!sender || !receiver) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "User not found"
       });
     }
 
@@ -424,23 +424,95 @@ module.exports.sendFriendRequest = async (req, res) => {
     if (sender.friends.includes(userId)) {
       return res.status(400).json({
         success: false,
-        message: "Already friends with this user",
+        message: "Already friends with this user"
       });
     }
 
-    // In a real implementation, we would create a friend request record
-    // For now, we'll just return success
+    // Check if there's already a pending request
+    const existingRequest = await FriendRequest.findOne({
+      $or: [
+        { sender: senderId, receiver: userId, status: 'pending' },
+        { sender: userId, receiver: senderId, status: 'pending' }
+      ]
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: "A friend request already exists between these users"
+      });
+    }
+
+    // Create new friend request
+    const friendRequest = await FriendRequest.create({
+      sender: senderId,
+      receiver: userId
+    });
 
     return res.status(200).json({
       success: true,
       message: "Friend request sent successfully",
+      data: friendRequest
     });
   } catch (error) {
     console.error("Error sending friend request:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send friend request",
-      error: error.message,
+      error: error.message
+    });
+  }
+};
+
+// Function to get pending friend requests
+module.exports.getPendingRequests = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Find all pending requests where the current user is the receiver
+    const pendingRequests = await FriendRequest.find({
+      receiver: userId,
+      status: 'pending'
+    }).populate('sender', '_id name email major interests hobbies education studyPreference statistics.lastActive');
+
+    return res.status(200).json({
+      success: true,
+      data: pendingRequests.map(request => ({
+        _id: request._id,
+        sender: request.sender
+      }))
+    });
+  } catch (error) {
+    console.error("Error fetching pending requests:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending requests",
+      error: error.message
+    });
+  }
+};
+
+// Function to get sent friend requests
+module.exports.getSentRequests = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Find all pending requests where the current user is the sender
+    const sentRequests = await FriendRequest.find({
+      sender: userId,
+      status: 'pending'
+    }).populate('receiver', '_id name email major interests hobbies education studyPreference statistics.lastActive');
+
+    return res.status(200).json({
+      success: true,
+      data: sentRequests.map(request => request.receiver)
+    });
+  } catch (error) {
+    console.error("Error fetching sent requests:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch sent requests",
+      error: error.message
     });
   }
 };
@@ -451,32 +523,45 @@ module.exports.acceptFriendRequest = async (req, res) => {
     const { requestId } = req.body;
     const userId = req.userId;
 
-    console.log("Accept friend request params:", { requestId, userId });
+    // Find the friend request
+    const friendRequest = await FriendRequest.findOne({
+      _id: requestId,
+      receiver: userId,
+      status: 'pending'
+    }).populate('sender');
 
-    if (!requestId) {
-      return res.status(400).json({
+    if (!friendRequest) {
+      return res.status(404).json({
         success: false,
-        message: "Request ID is required",
+        message: "Friend request not found"
       });
     }
 
-    // In a real implementation, this would verify the request exists
-    // For now, we'll update both users' friends lists
+    // Update request status
+    friendRequest.status = 'accepted';
+    await friendRequest.save();
 
     // Add each user to the other's friends list
-    await User.findByIdAndUpdate(userId, { $addToSet: { friends: requestId } });
-    await User.findByIdAndUpdate(requestId, { $addToSet: { friends: userId } });
+    await Promise.all([
+      User.findByIdAndUpdate(userId, { 
+        $addToSet: { friends: friendRequest.sender._id } 
+      }),
+      User.findByIdAndUpdate(friendRequest.sender._id, { 
+        $addToSet: { friends: userId } 
+      })
+    ]);
 
     return res.status(200).json({
       success: true,
       message: "Friend request accepted",
+      data: friendRequest.sender
     });
   } catch (error) {
     console.error("Error accepting friend request:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to accept friend request",
-      error: error.message,
+      error: error.message
     });
   }
 };
@@ -485,29 +570,36 @@ module.exports.acceptFriendRequest = async (req, res) => {
 module.exports.rejectFriendRequest = async (req, res) => {
   try {
     const { requestId } = req.body;
+    const userId = req.userId;
 
-    console.log("Reject friend request params:", { requestId });
+    // Find and update the friend request
+    const friendRequest = await FriendRequest.findOne({
+      _id: requestId,
+      receiver: userId,
+      status: 'pending'
+    });
 
-    if (!requestId) {
-      return res.status(400).json({
+    if (!friendRequest) {
+      return res.status(404).json({
         success: false,
-        message: "Request ID is required",
+        message: "Friend request not found"
       });
     }
 
-    // In a real implementation, this would find and delete the request
-    // For now, we'll just return success
+    // Update request status
+    friendRequest.status = 'rejected';
+    await friendRequest.save();
 
     return res.status(200).json({
       success: true,
-      message: "Friend request rejected",
+      message: "Friend request rejected"
     });
   } catch (error) {
     console.error("Error rejecting friend request:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to reject friend request",
-      error: error.message,
+      error: error.message
     });
   }
 };
@@ -544,75 +636,188 @@ module.exports.removeFriend = async (req, res) => {
   }
 };
 
-// Function to get pending friend requests
-module.exports.getPendingRequests = async (req, res) => {
+// Function to cancel a sent friend request
+module.exports.cancelFriendRequest = async (req, res) => {
   try {
-    const userId = req.userId;
+    const { userId } = req.body;
+    const senderId = req.userId;
 
-    // In a real implementation, this would query a FriendRequest collection
-    // For now, we'll return mock data to work with the frontend
+    // Find and delete the friend request
+    const friendRequest = await FriendRequest.findOneAndDelete({
+      sender: senderId,
+      receiver: userId,
+      status: 'pending'
+    });
 
-    // Mock pending requests data
-    const pendingRequests = [
-      {
-        _id: "pending1",
-        name: "Alice Johnson",
-        email: "alice@example.com",
-        major: "computer_science",
-        statistics: { lastActive: new Date(Date.now() - 45 * 60000) },
-      },
-      {
-        _id: "pending2",
-        name: "Bob Smith",
-        email: "bob@example.com",
-        major: "physics",
-        statistics: { lastActive: new Date(Date.now() - 120 * 60000) },
-      },
-    ];
+    if (!friendRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Friend request not found"
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      data: pendingRequests,
+      message: "Friend request canceled successfully"
     });
   } catch (error) {
-    console.error("Error fetching pending requests:", error);
+    console.error("Error canceling friend request:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch pending requests",
-      error: error.message,
+      message: "Failed to cancel friend request",
+      error: error.message
     });
   }
 };
 
-// Function to get sent friend requests
-module.exports.getSentRequests = async (req, res) => {
+// Get recommended friends
+module.exports.getRecommendedFriends = async (req, res, next) => {
   try {
     const userId = req.userId;
 
-    // In a real implementation, this would query a FriendRequest collection
-    // For now, we'll return mock data to work with the frontend
+    // Get the current user from database
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        error: 'User not found'
+      });
+    }
 
-    // Mock sent requests data
-    const sentRequests = [
-      {
-        _id: "sent1",
-        name: "Carol Williams",
-        email: "carol@example.com",
-        major: "mathematics",
-        statistics: { lastActive: new Date(Date.now() - 5 * 60000) },
-      },
-    ];
-
-    return res.status(200).json({
-      success: true,
-      data: sentRequests,
+    // Get pending friend requests sent to the current user
+    const pendingRequests = await FriendRequest.find({
+      receiver: userId,
+      status: 'pending'
     });
+
+    // Get IDs of users who have sent requests
+    const usersSentRequests = pendingRequests.map(request => request.sender);
+
+    // Get all users except:
+    // 1. Current user
+    // 2. Their friends
+    // 3. Users who have sent them friend requests
+    const otherUsers = await User.find({
+      _id: { 
+        $ne: userId, // not the current user
+        $nin: [...currentUser.friends, ...usersSentRequests] // not friends and not users who sent requests
+      }
+    }).select('name email major interests hobbies education studyPreference');
+
+    try {
+      // Prepare input for the Python script
+      const pythonInput = {
+        user_list: otherUsers.map(user => ({
+          _id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          major: user.major || "",
+          interests: user.interests || [],
+          hobbies: user.hobbies || [],
+          education: user.education || "",
+          studyPreference: user.studyPreference || ""
+        })),
+        target_user: {
+          _id: currentUser._id.toString(),
+          name: currentUser.name,
+          email: currentUser.email,
+          major: currentUser.major || "",
+          interests: currentUser.interests || [],
+          hobbies: currentUser.hobbies || [],
+          education: currentUser.education || "",
+          studyPreference: currentUser.studyPreference || ""
+        },
+        top_n: 10
+      };
+
+      console.log('Attempting to use Python matching algorithm...');
+      // Try to execute the Python matching script
+      const results = await executePythonScript('user_matcher.py', pythonInput);
+      console.log('Successfully used Python matching algorithm');
+      console.log('Python script results:', results);
+      
+      return res.status(httpStatus.OK).json({
+        ...results,
+        matchingMethod: 'python'
+      });
+    } catch (pythonError) {
+      console.error('Python script execution failed:', pythonError);
+      console.log('Falling back to JavaScript matching algorithm...');
+      
+      // Fallback to basic matching logic if Python script fails
+      const matches = otherUsers.map(user => {
+        // Calculate a basic match percentage based on common attributes
+        let matchScore = 0;
+        let totalFactors = 0;
+
+        // Major match (30%)
+        if (user.major && currentUser.major && user.major === currentUser.major) {
+          matchScore += 30;
+        }
+        totalFactors += 30;
+
+        // Education match (20%)
+        if (user.education && currentUser.education && user.education === currentUser.education) {
+          matchScore += 20;
+        }
+        totalFactors += 20;
+
+        // Study preference match (10%)
+        if (user.studyPreference && currentUser.studyPreference && user.studyPreference === currentUser.studyPreference) {
+          matchScore += 10;
+        }
+        totalFactors += 10;
+
+        // Interests overlap (25%)
+        if (user.interests?.length && currentUser.interests?.length) {
+          const commonInterests = user.interests.filter(interest => 
+            currentUser.interests.includes(interest)
+          );
+          const interestScore = (commonInterests.length / Math.max(user.interests.length, currentUser.interests.length)) * 25;
+          matchScore += interestScore;
+        }
+        totalFactors += 25;
+
+        // Hobbies overlap (15%)
+        if (user.hobbies?.length && currentUser.hobbies?.length) {
+          const commonHobbies = user.hobbies.filter(hobby => 
+            currentUser.hobbies.includes(hobby)
+          );
+          const hobbyScore = (commonHobbies.length / Math.max(user.hobbies.length, currentUser.hobbies.length)) * 15;
+          matchScore += hobbyScore;
+        }
+        totalFactors += 15;
+
+        // Calculate final percentage
+        const matchPercentage = totalFactors > 0 ? (matchScore / totalFactors) * 100 : 0;
+
+        return {
+          user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            major: user.major,
+            interests: user.interests,
+            hobbies: user.hobbies,
+            education: user.education,
+            studyPreference: user.studyPreference
+          },
+          matchPercentage
+        };
+      });
+
+      // Sort by match percentage in descending order
+      matches.sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+      return res.status(httpStatus.OK).json({ 
+        matches: matches.slice(0, 10),
+        matchingMethod: 'javascript'
+      });
+    }
   } catch (error) {
-    console.error("Error fetching sent requests:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch sent requests",
-      error: error.message,
+    console.error('Error in getRecommendedFriends:', error);
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      error: 'Failed to get recommended friends',
+      details: error.message
     });
   }
 };

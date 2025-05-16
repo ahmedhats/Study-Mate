@@ -15,6 +15,10 @@ const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
+// Import models
+require("./models/user.model");
+require("./models/friendRequest.model");
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {

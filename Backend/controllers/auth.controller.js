@@ -31,7 +31,7 @@ module.exports.register = async (req, res) => {
       expiresIn: "7d",
     });
     const subject = "Verify your email address";
-    const verificationLink = `${process.env.FRONTEND_URL}/#/verify-email?token=${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}#/verify-email?token=${token}`;
     const template = verificationEmailTemplate(verificationLink, user.name);
     try {
       await sendEmail(user.email, subject, template);

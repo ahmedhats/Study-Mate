@@ -3,39 +3,25 @@ const router = express.Router();
 const userController = require("../controllers/user.controller");
 const auth = require("../middlewares/auth.middleware");
 
-// Friend management endpoints
+// Get user's friends
 router.get("/friends", auth.verifyToken, userController.getUserFriends);
-router.delete(
-  "/friends/:userId",
-  auth.verifyToken,
-  userController.removeFriend
-);
 
 // Friend requests endpoints
-router.post(
-  "/friend-requests/send",
-  auth.verifyToken,
-  userController.sendFriendRequest
-);
-router.post(
-  "/friend-requests/accept",
-  auth.verifyToken,
-  userController.acceptFriendRequest
-);
-router.post(
-  "/friend-requests/reject",
-  auth.verifyToken,
-  userController.rejectFriendRequest
-);
+router.post("/friend-requests/send", auth.verifyToken, userController.sendFriendRequest);
+router.post("/friend-requests/accept", auth.verifyToken, userController.acceptFriendRequest);
+router.post("/friend-requests/reject", auth.verifyToken, userController.rejectFriendRequest);
+router.post("/friend-requests/cancel", auth.verifyToken, userController.cancelFriendRequest);
+router.get("/friend-requests/pending", auth.verifyToken, userController.getPendingRequests);
+router.get("/friend-requests/sent", auth.verifyToken, userController.getSentRequests);
+
+// Remove friend
+router.delete("/friends/:userId", auth.verifyToken, userController.removeFriend);
+
+// Recommended friends endpoint
 router.get(
-  "/friend-requests/pending",
+  "/recommended-friends",
   auth.verifyToken,
-  userController.getPendingRequests
-);
-router.get(
-  "/friend-requests/sent",
-  auth.verifyToken,
-  userController.getSentRequests
+  userController.getRecommendedFriends
 );
 
 module.exports = router;

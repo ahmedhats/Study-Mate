@@ -27,6 +27,7 @@ const auth = async (req, res, next) => {
     }
 
     req.user = user;
+    req.userId = user._id;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -54,6 +55,7 @@ const verifyToken = async (req, res, next) => {
     }
 
     req.user = user;
+    req.userId = user._id;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
