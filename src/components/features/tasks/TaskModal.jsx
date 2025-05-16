@@ -13,6 +13,7 @@ import {
   Tabs,
   Table,
   Tag,
+  message,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, UserOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -71,22 +72,47 @@ const TaskModal = ({
     onCancel();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      // Add subtasks and team members to the form values
-      values.subtasks = subtasks;
-      values.teamMembers = teamMembers;
-      onSubmit(values);
+      
+      // Format the task data
+      const taskData = {
+        ...values,
+        dueDate: values.dueDate ? values.dueDate.format("YYYY-MM-DD") : undefined,
+        subtasks: subtasks.map(st => ({
+          title: st.title,
+          completed: st.completed || false
+        })),
+        teamMembers: teamMembers.map(member => ({
+          user: member.user,
+          permissions: member.permissions
+        }))
+      };
+
+      console.log("Submitting task data:", taskData); // Debug log
+
+      // Call the onSubmit prop with the formatted data
+      await onSubmit(taskData);
+      
+      // Reset form and state
+      form.resetFields();
       setSubtasks([]);
-      setNewSubtask("");
       setTeamMembers([]);
+      setNewSubtask("");
       setSelectedUser(null);
       setSelectedPermission("view");
-      form.resetFields();
+      setActiveTab("1");
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.error("Form validation failed:", error);
+      if (error.errorFields) {
+        // Handle validation errors
+        error.errorFields.forEach(field => {
+          message.error(`${field.name}: ${field.errors[0]}`);
+        });
+      } else {
+        message.error("Failed to save task. Please try again.");
+      }
     }
   };
 
