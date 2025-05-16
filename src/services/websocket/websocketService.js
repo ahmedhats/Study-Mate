@@ -27,7 +27,7 @@ class WebSocketService {
       return;
     }
     const wsUrl = `${
-      process.env.REACT_APP_WS_URL || "ws://localhost:5001"
+      process.env.REACT_APP_WS_URL || "ws://localhost:5000"
     }?token=${token}`;
     this.ws = new WebSocket(wsUrl);
 

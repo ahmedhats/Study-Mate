@@ -4,10 +4,10 @@ const axios = require("axios");
 async function testApi() {
   try {
     console.log(
-      "Testing API connection to http://localhost:5001/api/study-sessions..."
+      "Testing API connection to http://localhost:5000/api/study-sessions..."
     );
     const response = await axios.get(
-      "http://localhost:5001/api/study-sessions"
+      "http://localhost:5000/api/study-sessions"
     );
     console.log("Connection successful!");
     console.log("Response status:", response.status);
@@ -16,7 +16,7 @@ async function testApi() {
     console.error("Connection failed!");
     if (error.code === "ECONNREFUSED") {
       console.error(
-        "The server is not running or not accessible at port 5001."
+        "The server is not running or not accessible at port 5000."
       );
       console.error("Please make sure the backend server is running.");
     } else {
