@@ -24,6 +24,7 @@ import {
   SettingOutlined,
   UserOutlined,
   ExclamationCircleOutlined,
+  RedoOutlined,
 } from "@ant-design/icons";
 import AgoraVideoRoom from "./AgoraVideo";
 import {
@@ -63,6 +64,7 @@ const AgoraStudyRoom = () => {
 
   // Refs
   const timerRef = useRef(null);
+  const lastTimestampRef = useRef(null);
 
   useEffect(() => {
     // Load user information from localStorage
@@ -71,8 +73,8 @@ const AgoraStudyRoom = () => {
     // Fetch session details
     fetchSessionDetails();
 
-    // Setup timer for study duration
-    setupStudyTimer();
+    // Load saved timer state and notes if they exist
+    loadSavedTimerState();
 
     // Cleanup function
     return () => {
@@ -82,9 +84,67 @@ const AgoraStudyRoom = () => {
       // Stop timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
+
+      // Save timer state on dismount
+      saveTimerState();
     };
   }, []);
+
+  // Save timer state when timer changes
+  useEffect(() => {
+    if (timerActive) {
+      setupStudyTimer();
+    } else {
+      // Save state when timer is paused
+      saveTimerState();
+    }
+  }, [timerActive]);
+
+  // Save timer state when study time changes
+  useEffect(() => {
+    // Only save if there's actual study time to avoid overwriting with 0
+    if (studyTime > 0) {
+      saveTimerState();
+    }
+  }, [studyTime]);
+
+  // Load saved timer state and notes from localStorage
+  const loadSavedTimerState = () => {
+    try {
+      const savedTimerState = localStorage.getItem(`timer_state_${sessionId}`);
+      if (savedTimerState) {
+        const { time, notes } = JSON.parse(savedTimerState);
+        setStudyTime(time || 0);
+
+        // Only set notes if they're not empty and we don't already have notes
+        if (notes && notes.trim() !== "") {
+          setStudyNotes(notes);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading saved timer state:", error);
+    }
+  };
+
+  // Save timer state to localStorage
+  const saveTimerState = () => {
+    try {
+      const timerState = {
+        time: studyTime,
+        notes: studyNotes,
+        sessionId: sessionId,
+        lastUpdated: new Date().toISOString(),
+      };
+      localStorage.setItem(
+        `timer_state_${sessionId}`,
+        JSON.stringify(timerState)
+      );
+    } catch (error) {
+      console.error("Error saving timer state:", error);
+    }
+  };
 
   // Load user info from localStorage
   const loadUserInfo = () => {
@@ -191,13 +251,28 @@ const AgoraStudyRoom = () => {
 
   // Setup study timer
   const setupStudyTimer = () => {
-    if (!timerRef.current) {
-      timerRef.current = setInterval(() => {
-        if (timerActive) {
-          setStudyTime((prev) => prev + 1);
-        }
-      }, 1000);
+    // Clear existing timer if it exists
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+
+    // Start a new timer that uses performance.now() for more accuracy
+    lastTimestampRef.current = Date.now();
+
+    timerRef.current = setInterval(() => {
+      if (timerActive) {
+        const now = Date.now();
+        const elapsed = now - lastTimestampRef.current;
+        lastTimestampRef.current = now;
+
+        // Only update if elapsed time is reasonable (less than 2 seconds)
+        // This prevents huge jumps if the tab was inactive
+        if (elapsed > 0 && elapsed < 2000) {
+          setStudyTime((prevTime) => prevTime + Math.floor(elapsed / 1000));
+        }
+      }
+    }, 1000);
   };
 
   // Format time for display
@@ -213,7 +288,38 @@ const AgoraStudyRoom = () => {
 
   // Toggle timer
   const toggleTimer = () => {
-    setTimerActive(!timerActive);
+    const newTimerState = !timerActive;
+    setTimerActive(newTimerState);
+
+    // If starting timer, reset lastTimestampRef
+    if (newTimerState) {
+      lastTimestampRef.current = Date.now();
+    } else {
+      // If stopping, save the state
+      saveTimerState();
+    }
+  };
+
+  // Reset timer
+  const resetTimer = () => {
+    // Stop timer first
+    setTimerActive(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Reset time to 0
+    setStudyTime(0);
+
+    // Save the reset state
+    saveTimerState();
+
+    notification.info({
+      message: "Timer Reset",
+      description: "Study timer has been reset to zero.",
+      duration: 3,
+    });
   };
 
   // Send chat message
@@ -599,6 +705,9 @@ const AgoraStudyRoom = () => {
                 >
                   {timerActive ? "Pause Timer" : "Start Timer"}
                 </Button>
+                <Button icon={<RedoOutlined />} onClick={resetTimer} danger>
+                  Reset
+                </Button>
                 <Text>
                   <ClockCircleOutlined /> Study Time: {formatTime(studyTime)}
                 </Text>
@@ -617,6 +726,7 @@ const AgoraStudyRoom = () => {
               placeholder="Take notes during your study session here..."
               value={studyNotes}
               onChange={handleNotesChange}
+              onBlur={saveTimerState}
             />
           </Card>
         </TabPane>

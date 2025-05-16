@@ -21,6 +21,7 @@ import {
   Col,
   Radio,
   DatePicker,
+  Popconfirm,
 } from "antd";
 import {
   UserOutlined,
@@ -31,18 +32,20 @@ import {
   SearchOutlined,
   FilterOutlined,
   CalendarOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import {
   getAllStudySessions,
   createStudySession,
   joinStudySession,
+  deleteStudySession,
 } from "../services/api/studySessionService";
 import "../styles/StudySessions.css";
 
 const { TextArea } = Input;
 const { Option } = Select;
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const StudySession = () => {
   const [sessions, setSessions] = useState([]);
@@ -108,16 +111,36 @@ const StudySession = () => {
         console.error("Error handling user data:", userDataError);
       }
 
-      // Set the type based on sessionMode if it's individual/group
-      const sessionData = {
-        ...values,
-        // Convert Moment objects to ISO strings
-        startTime: values.startTime
-          ? values.startTime.toISOString()
-          : undefined,
-        endTime: values.endTime ? values.endTime.toISOString() : undefined,
-        type: values.sessionMode || values.type,
-      };
+      // Handle start immediately option
+      let sessionData;
+      if (values.startImmediately) {
+        // Set session to start now and remove scheduling fields
+        sessionData = {
+          ...values,
+          status: "active", // Set as active immediately
+          startTime: new Date().toISOString(),
+          scheduledFor: new Date().toISOString(),
+          type: values.sessionMode || values.type,
+        };
+        // Remove the startImmediately field as it's not needed in the API
+        delete sessionData.startImmediately;
+      } else {
+        // Use scheduled times
+        sessionData = {
+          ...values,
+          // Convert Moment objects to ISO strings if they exist
+          startTime: values.startTime
+            ? values.startTime.toISOString()
+            : undefined,
+          endTime: values.endTime ? values.endTime.toISOString() : undefined,
+          scheduledFor: values.startTime
+            ? values.startTime.toISOString()
+            : undefined,
+          status: "scheduled",
+          type: values.sessionMode || values.type,
+        };
+        delete sessionData.startImmediately;
+      }
 
       console.log("Creating session with data:", sessionData);
 
@@ -127,16 +150,26 @@ const StudySession = () => {
         title: values.title,
         description: values.description,
         subject: values.subject,
-        status: "active",
+        status: values.startImmediately ? "active" : "scheduled",
         participants: [{ _id: "current-user", name: "You" }],
         createdAt: new Date().toISOString(),
-        scheduledFor: values.startTime ? values.startTime.toISOString() : null,
+        scheduledFor: values.startImmediately
+          ? new Date().toISOString()
+          : values.startTime
+          ? values.startTime.toISOString()
+          : null,
         maxParticipants: values.maxParticipants || 10,
         type: values.sessionMode || values.type,
-        startTime: values.startTime
+        startTime: values.startImmediately
+          ? new Date().toISOString()
+          : values.startTime
           ? values.startTime.toISOString()
           : undefined,
-        endTime: values.endTime ? values.endTime.toISOString() : undefined,
+        endTime: values.startImmediately
+          ? undefined
+          : values.endTime
+          ? values.endTime.toISOString()
+          : undefined,
       };
 
       try {
@@ -197,6 +230,19 @@ const StudySession = () => {
       // For demo purposes, navigate anyway
       navigate(`/study-session/${sessionId}`);
       message.warning("Joining session in demo mode");
+    }
+  };
+
+  const handleDeleteSession = async (sessionId, e) => {
+    e.stopPropagation(); // Prevent the click from triggering the join session
+    try {
+      await deleteStudySession(sessionId);
+      message.success("Study session deleted successfully");
+      // Refresh the sessions list
+      fetchSessions();
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      message.error("Failed to delete session");
     }
   };
 
@@ -449,79 +495,106 @@ const StudySession = () => {
             xs: 1,
             sm: 1,
             md: 2,
-            lg: 2,
+            lg: 3,
             xl: 3,
-            xxl: 3,
+            xxl: 4,
           }}
           dataSource={filteredSessions}
-          renderItem={(session) => (
-            <List.Item>
-              <Card
-                hoverable
-                className="session-card"
-                title={session.title}
-                extra={getStatusBadge(session.status)}
-                actions={[
-                  <Tooltip title="Join Session">
-                    <Button
-                      type="primary"
-                      icon={<VideoCameraOutlined />}
-                      onClick={() => handleJoinSession(session._id)}
-                      disabled={session.status === "completed"}
-                    >
-                      Join
-                    </Button>
-                  </Tooltip>,
-                ]}
-              >
-                <div style={{ minHeight: "120px" }}>
-                  <Text type="secondary" className="session-description">
-                    {session.description}
-                  </Text>
+          renderItem={(session) => {
+            // Get user data to check if the current user is the creator
+            let userData;
+            try {
+              const userDataStr = localStorage.getItem("userData");
+              userData = userDataStr ? JSON.parse(userDataStr) : null;
+            } catch (error) {
+              console.error("Error parsing user data:", error);
+              userData = null;
+            }
 
-                  <Divider style={{ margin: "12px 0" }} />
+            // Check if current user is the creator (first participant)
+            const isCreator =
+              userData &&
+              session.participants &&
+              session.participants.length > 0 &&
+              (session.participants[0]._id === userData.id ||
+                session.participants[0]._id === userData._id ||
+                session.participants[0]._id === "current-user");
 
-                  <Space
-                    direction="vertical"
-                    size="small"
-                    style={{ width: "100%" }}
-                  >
-                    {session.subject && (
-                      <Tag color="blue">{session.subject}</Tag>
-                    )}
-
-                    {session.type && (
-                      <Tag color={getSessionTypeTagColor(session.type)}>
-                        {sessionTypes.find((t) => t.value === session.type)
-                          ?.label || session.type}
-                      </Tag>
-                    )}
-
-                    <div className="session-meta">
-                      <Space>
-                        <TeamOutlined />
-                        <Text>
-                          {session.participants.length} /{" "}
-                          {session.maxParticipants || "∞"} participants
-                        </Text>
-                      </Space>
-                    </div>
-
-                    {session.scheduledFor && (
-                      <div>
-                        <Space>
-                          <CalendarOutlined />
-                          <Text>
-                            {new Date(session.scheduledFor).toLocaleString()}
-                          </Text>
-                        </Space>
+            return (
+              <List.Item>
+                <Card
+                  hoverable
+                  onClick={() => handleJoinSession(session._id)}
+                  actions={[
+                    <Button type="primary" size="small">
+                      <VideoCameraOutlined /> Join
+                    </Button>,
+                  ]}
+                  extra={
+                    isCreator && (
+                      <Popconfirm
+                        title="Delete this study session?"
+                        description="This cannot be undone."
+                        onConfirm={(e) => handleDeleteSession(session._id, e)}
+                        okText="Yes"
+                        cancelText="No"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </Popconfirm>
+                    )
+                  }
+                  className="session-card"
+                >
+                  <Card.Meta
+                    title={
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        <span style={{ marginRight: "8px" }}>
+                          {session.title}
+                        </span>
+                        <Tag color={getSessionTypeTagColor(session.type)}>
+                          {session.type}
+                        </Tag>
                       </div>
-                    )}
-                  </Space>
-                </div>
-              </Card>
-            </List.Item>
-          )}
+                    }
+                    description={
+                      <>
+                        <Paragraph
+                          ellipsis={{ rows: 2 }}
+                          style={{ marginBottom: "8px" }}
+                        >
+                          {session.description}
+                        </Paragraph>
+                        <Space direction="vertical" size="small">
+                          {getStatusBadge(session.status)}
+                          {session.subject && (
+                            <Text type="secondary">
+                              Subject: {session.subject}
+                            </Text>
+                          )}
+                          <div>
+                            <TeamOutlined /> {session.participants?.length || 0}{" "}
+                            / {session.maxParticipants || "∞"}
+                          </div>
+                          {session.scheduledFor && (
+                            <div>
+                              <ClockCircleOutlined />{" "}
+                              {new Date(session.scheduledFor).toLocaleString()}
+                            </div>
+                          )}
+                        </Space>
+                      </>
+                    }
+                  />
+                </Card>
+              </List.Item>
+            );
+          }}
         />
       ) : (
         <Empty
@@ -551,6 +624,7 @@ const StudySession = () => {
             maxParticipants: 10,
             type: "general",
             sessionMode: "group",
+            startImmediately: true,
           }}
         >
           <Form.Item
@@ -569,138 +643,88 @@ const StudySession = () => {
             <TextArea rows={4} placeholder="Enter session description" />
           </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="subject"
-                label="Subject"
-                rules={[{ required: true, message: "Please select a subject" }]}
-              >
-                <Select placeholder="Select subject">
-                  {subjects.map((subject) => (
-                    <Option key={subject} value={subject}>
-                      {subject}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+          <Form.Item name="subject" label="Subject">
+            <Select placeholder="Select subject">
+              {subjects.map((subject) => (
+                <Option key={subject} value={subject}>
+                  {subject}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
 
-            <Col span={12}>
-              <Form.Item name="type" label="Session Type">
-                <Select placeholder="Select session type">
-                  {sessionTypes.map((type) => (
-                    <Option key={type.value} value={type.value}>
-                      {type.label}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="startTime"
-                label="Start Time"
-                rules={[
-                  { required: true, message: "Please select a start time" },
-                ]}
-              >
-                <DatePicker showTime style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="endTime"
-                label="End Time"
-                rules={[
-                  { required: true, message: "Please select an end time" },
-                ]}
-              >
-                <DatePicker showTime style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="sessionMode"
-            label="Session Mode"
-            initialValue="group"
-            rules={[{ required: true }]}
-          >
-            <Radio.Group
-              buttonStyle="solid"
-              size="large"
-              style={{ width: "100%", marginBottom: "20px" }}
-              onChange={handleSessionModeChange}
-            >
-              <Radio.Button
-                value="individual"
-                style={{
-                  width: "50%",
-                  textAlign: "center",
-                  height: "60px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div>
-                  <UserOutlined
-                    style={{ fontSize: "20px", marginRight: "8px" }}
-                  />
-                  <span style={{ fontSize: "16px" }}>Individual Study</span>
-                </div>
-              </Radio.Button>
+          <Form.Item name="sessionMode" label="Session Type">
+            <Radio.Group onChange={handleSessionModeChange}>
               <Radio.Button
                 value="group"
-                style={{
-                  width: "50%",
-                  textAlign: "center",
-                  height: "60px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                style={sessionMode === "group" ? sessionTypeStyles.group : {}}
               >
-                <div>
-                  <TeamOutlined
-                    style={{ fontSize: "20px", marginRight: "8px" }}
-                  />
-                  <span style={{ fontSize: "16px" }}>Group Study</span>
-                </div>
+                Group Study
+              </Radio.Button>
+              <Radio.Button
+                value="individual"
+                style={
+                  sessionMode === "individual"
+                    ? sessionTypeStyles.individual
+                    : {}
+                }
+              >
+                Individual Study
               </Radio.Button>
             </Radio.Group>
           </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="maxParticipants"
-                label="Maximum Participants"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please enter maximum participants",
-                  },
-                ]}
-                extra={
-                  sessionMode === "individual"
-                    ? "Individual sessions are limited to 1 participant"
-                    : ""
-                }
-              >
-                <Input
-                  type="number"
-                  min={sessionMode === "individual" ? 1 : 2}
-                  max={50}
-                  disabled={sessionMode === "individual"}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            name="maxParticipants"
+            label="Maximum Participants"
+            rules={[
+              {
+                required: true,
+                message: "Please enter maximum participants",
+              },
+            ]}
+            extra={
+              sessionMode === "individual"
+                ? "Individual sessions are limited to 1 participant"
+                : ""
+            }
+          >
+            <Input
+              type="number"
+              min={sessionMode === "individual" ? 1 : 2}
+              max={50}
+              disabled={sessionMode === "individual"}
+            />
+          </Form.Item>
+
+          <Form.Item name="startImmediately" valuePropName="checked">
+            <Radio.Group>
+              <Radio value={true}>Start immediately</Radio>
+              <Radio value={false}>Schedule for later</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) =>
+              prevValues.startImmediately !== currentValues.startImmediately
+            }
+          >
+            {({ getFieldValue }) => {
+              const startImmediately = getFieldValue("startImmediately");
+              return !startImmediately ? (
+                <>
+                  <Form.Item name="startTime" label="Start Time">
+                    <DatePicker showTime format="YYYY-MM-DD HH:mm" />
+                  </Form.Item>
+
+                  <Form.Item name="endTime" label="End Time">
+                    <DatePicker showTime format="YYYY-MM-DD HH:mm" />
+                  </Form.Item>
+                </>
+              ) : null;
+            }}
+          </Form.Item>
 
           <Form.Item>
             <Button type="primary" htmlType="submit" block>
