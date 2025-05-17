@@ -39,19 +39,19 @@ const taskSchema = new mongoose.Schema(
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: false,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: true,
     },
     teamMembers: [
       {
         user: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Users",
+          ref: "User",
           required: true,
         },
         permissions: {
@@ -91,7 +91,7 @@ const taskSchema = new mongoose.Schema(
       {
         user: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Users",
+          ref: "User",
           required: true,
         },
         content: {
@@ -149,5 +149,4 @@ taskSchema.index({ createdBy: 1, status: 1 });
 taskSchema.index({ importance: 1 });
 taskSchema.index({ "teamMembers.user": 1 });
 
-const Task = mongoose.model("Tasks", taskSchema);
-module.exports = Task;
+const Task = mongoose.model("Task", taskSchema);module.exports = Task;

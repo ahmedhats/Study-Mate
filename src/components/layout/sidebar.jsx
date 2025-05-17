@@ -9,6 +9,7 @@ import {
   Button,
   Drawer,
   Grid,
+  Badge,
 } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -28,8 +29,12 @@ import {
   MenuUnfoldOutlined,
   UserOutlined,
   CalendarOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import "../../styles/sidebar.css";
+
+// Add a new import for the conversation service
+import { getUserConversations } from "../../services/api/conversationService";
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -48,6 +53,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [userData, setUserData] = useState(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Track window size changes for responsive behavior
   useEffect(() => {
@@ -97,6 +103,55 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     }
   }, []);
 
+  // Add new effect to fetch unread message count
+  useEffect(() => {
+    const fetchUnreadMessages = async () => {
+      try {
+        const response = await getUserConversations();
+        if (response.success) {
+          // Calculate unread count by checking each conversation
+          let count = 0;
+          
+          // Check if response.conversations exists (matches backend response format)
+          const conversations = response.conversations || [];
+          
+          conversations.forEach(conversation => {
+            if (userData && conversation.lastMessage) {
+              // Find current user's participant record
+              const userParticipant = conversation.participants.find(
+                p => p.userId._id === userData._id
+              );
+              
+              if (userParticipant) {
+                // Compare timestamps to determine if message is unread
+                const lastMessageTime = new Date(conversation.lastMessage.timestamp).getTime();
+                const lastReadTime = new Date(userParticipant.lastReadTimestamp).getTime();
+                
+                if (lastMessageTime > lastReadTime) {
+                  count += 1;
+                }
+              }
+            }
+          });
+          
+          setUnreadMessageCount(count);
+        }
+      } catch (error) {
+        console.error("Error fetching unread messages:", error);
+      }
+    };
+
+    // Only fetch if we have user data
+    if (userData) {
+      fetchUnreadMessages();
+      
+      // Set up polling for unread message updates
+      const interval = setInterval(fetchUnreadMessages, 60000); // Every minute
+      
+      return () => clearInterval(interval);
+    }
+  }, [userData]);
+
   const handleProfileClick = () => {
     navigate("/profile");
     if (isMobile) {
@@ -127,6 +182,14 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     getItem("Dashboard", "dashboard", <HomeOutlined />, "/dashboard"),
     getItem("Communities", "search", <SearchOutlined />, "/search"), // Communities page
     getItem("Inbox", "inbox", <InboxOutlined />, "/inbox"), // Example path
+    getItem(
+      "Messages", 
+      "messages", 
+      <Badge count={unreadMessageCount} offset={[10, 0]} size="small">
+        <MessageOutlined />
+      </Badge>, 
+      "/messages"
+    ), // Messaging feature
     getItem("My Task", "my-task", <CheckSquareOutlined />, "/tasks"), // Example path
     getItem("Calendar", "calendar", <CalendarOutlined />, "/calendar"), // New Calendar item
     getItem("Social", "social", <TeamOutlined />, "/profile/social"), // Updated label and path

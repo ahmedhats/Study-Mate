@@ -6,7 +6,7 @@ import api from "./axiosConfig";
  */
 export const getConversations = async () => {
   try {
-    const response = await api.get("/messages/conversations");
+    const response = await api.get("/conversations");
     return response.data;
   } catch (error) {
     console.error("Error fetching conversations:", error);
@@ -56,7 +56,7 @@ export const sendMessage = async (recipientId, content) => {
 export const markConversationAsRead = async (conversationId) => {
   try {
     const response = await api.put(
-      `/messages/conversations/${conversationId}/read`
+      `/conversations/${conversationId}/read`
     );
     return response.data;
   } catch (error) {
@@ -86,9 +86,7 @@ export const getUnreadCount = async () => {
  */
 export const createConversation = async (userId) => {
   try {
-    const response = await api.post("/messages/conversations", {
-      userId,
-    });
+    const response = await api.post("/conversations/dm/" + userId);
     return response.data;
   } catch (error) {
     console.error("Error creating conversation:", error);

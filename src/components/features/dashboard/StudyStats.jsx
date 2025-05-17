@@ -8,11 +8,15 @@ import {
 
 const StudyStats = ({ userData }) => {
   const stats = {
-    totalHours: userData?.studyStats?.totalHours || 0,
-    completedTasks: userData?.studyStats?.completedTasks || 0,
-    studyStreak: userData?.studyStats?.studyStreak || 0,
-    weeklyGoal: userData?.studyStats?.weeklyGoal || 0,
+    totalHours: userData?.statistics?.totalHours || 0,
+    completedTasks: userData?.statistics?.completedTasks || 0,
+    studyStreak: userData?.statistics?.studyStreak || 0,
+    weeklyGoal: userData?.statistics?.weeklyGoal || userData?.productivity?.weeklyGoal || 20,
   };
+
+  const weeklyGoalPercentage = stats.weeklyGoal 
+    ? Math.min((stats.totalHours / stats.weeklyGoal) * 100, 100) 
+    : 0;
 
   return (
     <Card
@@ -53,7 +57,7 @@ const StudyStats = ({ userData }) => {
       </Row>
       <div style={{ marginTop: 24 }}>
         <Progress
-          percent={Math.min((stats.totalHours / stats.weeklyGoal) * 100, 100)}
+          percent={weeklyGoalPercentage}
           status="active"
           format={(percent) => `${Math.round(percent)}% of weekly goal`}
         />

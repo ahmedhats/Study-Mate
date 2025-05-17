@@ -15,13 +15,26 @@ import {
   UserAddOutlined,
   CheckOutlined,
   ClockCircleOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { sendFriendRequest } from "../../../services/api/socialService";
 import { formatLastActive, isUserOnline } from "../../../utils/dateFormatter";
+import { useNavigate } from "react-router-dom";
+import { useMessaging } from "../../../context/MessagingContext";
 
-const UserProfile = ({ user, onAddFriend }) => {
-  const [connectionStatus, setConnectionStatus] = useState("none"); // none, pending, connected
+const UserProfile = ({ user, onAddFriend, connectionStatus: propConnectionStatus }) => {
+  const [connectionStatus, setConnectionStatus] = useState(propConnectionStatus || "none"); // none, pending, connected
   const [loading, setLoading] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const navigate = useNavigate();
+  const { actions: messagingActions, error: messagingError } = useMessaging();
+  
+  // Update connection status when prop changes
+  useEffect(() => {
+    if (propConnectionStatus && propConnectionStatus !== connectionStatus) {
+      setConnectionStatus(propConnectionStatus);
+    }
+  }, [propConnectionStatus]);
 
   // Format the major field
   const formatMajor = (majorValue) => {
@@ -83,6 +96,30 @@ const UserProfile = ({ user, onAddFriend }) => {
       message.error("Failed to send friend request. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartConversation = async () => {
+    if (!user || !user._id) {
+      message.error("User information is missing.");
+      return;
+    }
+    setMessageLoading(true);
+    try {
+      // Use action from MessagingContext
+      const conversationData = await messagingActions.createDMConversation(user._id);
+      
+      if (conversationData && conversationData._id) {
+        navigate(`/messages/${conversationData._id}`);
+      } else {
+        // Error might be in messagingError from context or if createDMConversation itself throws
+        throw new Error(messagingError?.message || "Failed to get or create conversation.");
+      }
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      message.error(error.message || "Failed to start conversation. Please try again.");
+    } finally {
+      setMessageLoading(false);
     }
   };
 
@@ -167,7 +204,17 @@ const UserProfile = ({ user, onAddFriend }) => {
           className="user-actions-container"
           style={{ textAlign: "center" }}
         >
-          {getConnectionButton()}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {getConnectionButton()}
+            <Button 
+              icon={<MessageOutlined />} 
+              onClick={handleStartConversation}
+              loading={messageLoading}
+              style={{ marginLeft: 8 }}
+            >
+              Message
+            </Button>
+          </div>
         </Col>
       </Row>
 

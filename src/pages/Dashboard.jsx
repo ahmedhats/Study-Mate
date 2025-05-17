@@ -19,6 +19,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserData();
@@ -26,10 +27,28 @@ const Dashboard = () => {
 
   const fetchUserData = async () => {
     try {
-      const data = await getUserProfile();
-      setUserData(data);
+      setLoading(true);
+      const response = await getUserProfile();
+      
+      // Extract user data from the response, handling different response formats
+      let userDataFromApi;
+      if (response && response.success && response.data) {
+        // API returns {success: true, data: {...}}
+        userDataFromApi = response.data;
+      } else if (response && response.user) {
+        // API returns {user: {...}}
+        userDataFromApi = response.user;
+      } else {
+        // API returns the user data directly
+        userDataFromApi = response;
+      }
+      
+      setUserData(userDataFromApi);
     } catch (error) {
+      console.error("Failed to fetch user data:", error);
       message.error("Failed to fetch user data");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,10 +65,10 @@ const Dashboard = () => {
     email: "",
     education: "",
     major: "",
-    interests: "",
-    hobbies: "",
+    interests: [],
+    hobbies: [],
     studyPreference: "",
-    studyStats: {
+    statistics: {
       totalHours: 0,
       completedTasks: 0,
       studyStreak: 0,
@@ -59,6 +78,12 @@ const Dashboard = () => {
   };
 
   const displayUserData = userData || defaultUserData;
+
+  // Safely get the first name with fallbacks
+  const getFirstName = () => {
+    if (!displayUserData || !displayUserData.name) return "User";
+    return displayUserData.name.split(" ")[0] || "User";
+  };
 
   const actionCards = [
     {
@@ -91,7 +116,7 @@ const Dashboard = () => {
       <Content className="dashboard-content">
         <div className="dashboard-container">
           <div className="welcome-header">
-            <h1>Welcome back, {displayUserData.name.split(" ")[0]}!</h1>
+            <h1>Welcome back, {getFirstName()}!</h1>
             <Button
               type="primary"
               icon={<SettingOutlined />}

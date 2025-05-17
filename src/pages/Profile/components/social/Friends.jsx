@@ -25,6 +25,7 @@ import {
   TeamOutlined,
   TrophyOutlined,
   BookOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import {
   getUserFriends,
@@ -42,6 +43,8 @@ import {
   isUserOnline,
 } from "../../../../utils/dateFormatter";
 import { Typography } from "antd";
+import { useNavigate } from "react-router-dom";
+import DirectMessageButton from "../../../../components/features/messaging/DirectMessageButton";
 
 const { TabPane } = Tabs;
 const { Search } = Input;
@@ -58,6 +61,7 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const navigate = useNavigate();
 
   // Expose fetchFriendsData through ref
   useImperativeHandle(ref, () => ({
@@ -299,48 +303,6 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
     }
   };
 
-  // Helper function to format the major field
-  const formatMajor = (majorValue) => {
-    const majorMap = {
-      computer_science: "Computer Science",
-      biology: "Biology",
-      engineering: "Engineering",
-      mathematics: "Mathematics",
-      business: "Business",
-      literature: "Literature",
-      physics: "Physics",
-      chemistry: "Chemistry",
-      psychology: "Psychology",
-      medicine: "Medicine",
-      arts: "Arts",
-      other: "Other",
-    };
-    return majorMap[majorValue] || majorValue;
-  };
-
-  // Helper function to format the education value
-  const formatEducation = (educationValue) => {
-    const educationMap = {
-      high_school: "High School",
-      bachelors: "Bachelor's",
-      masters: "Master's",
-      phd: "PhD",
-      other: "Other",
-    };
-    return educationMap[educationValue] || educationValue || "Not specified";
-  };
-
-  // Helper function to format study preference
-  const formatStudyPreference = (preference) => {
-    const preferenceMap = {
-      morning: "Morning Person",
-      evening: "Evening Person",
-      flexible: "Flexible",
-      night: "Night Owl",
-    };
-    return preferenceMap[preference] || preference || "Not specified";
-  };
-
   const showUserProfile = (user) => {
     setSelectedUser(user);
     setProfileModalVisible(true);
@@ -355,6 +317,13 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
           <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
           <Title level={2}>{user.name}</Title>
           <Text type="secondary">{user.email}</Text>
+          <div style={{ marginTop: '12px' }}>
+            <DirectMessageButton 
+              userId={user._id} 
+              type="primary" 
+              showText={true}
+            />
+          </div>
         </div>
 
         <Divider />
@@ -443,6 +412,48 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
     );
   };
 
+  // Helper function to format the major field
+  const formatMajor = (majorValue) => {
+    const majorMap = {
+      computer_science: "Computer Science",
+      biology: "Biology",
+      engineering: "Engineering",
+      mathematics: "Mathematics",
+      business: "Business",
+      literature: "Literature",
+      physics: "Physics",
+      chemistry: "Chemistry",
+      psychology: "Psychology",
+      medicine: "Medicine",
+      arts: "Arts",
+      other: "Other",
+    };
+    return majorMap[majorValue] || majorValue;
+  };
+
+  // Helper function to format the education value
+  const formatEducation = (educationValue) => {
+    const educationMap = {
+      high_school: "High School",
+      bachelors: "Bachelor's",
+      masters: "Master's",
+      phd: "PhD",
+      other: "Other",
+    };
+    return educationMap[educationValue] || educationValue || "Not specified";
+  };
+
+  // Helper function to format study preference
+  const formatStudyPreference = (preference) => {
+    const preferenceMap = {
+      morning: "Morning Person",
+      evening: "Evening Person",
+      flexible: "Flexible",
+      night: "Night Owl",
+    };
+    return preferenceMap[preference] || preference || "Not specified";
+  };
+
   // Render user item for the list
   const renderUserItem = (user, actions) => {
     const isOnline = user.statistics?.lastActive
@@ -451,7 +462,22 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
 
     return (
       <List.Item 
-        actions={actions}
+        actions={[
+          <DirectMessageButton 
+            userId={user._id} 
+            showText={true}
+          />,
+          <Button
+            icon={<UserDeleteOutlined />}
+            danger
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveFriend(user._id);
+            }}
+          >
+            Remove
+          </Button>,
+        ]}
         className="friend-list-item"
         onClick={() => showUserProfile(user)}
       >
@@ -530,15 +556,7 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
             <List
               dataSource={friends}
               renderItem={(user) =>
-                renderUserItem(user, [
-                  <Button
-                    icon={<UserDeleteOutlined />}
-                    danger
-                    onClick={() => handleRemoveFriend(user._id)}
-                  >
-                    Remove
-                  </Button>,
-                ])
+                renderUserItem(user, [])
               }
             />
           ) : (

@@ -75,9 +75,21 @@ export const getAllUsers = async () => {
   }
 };
 
-export const searchUsers = async (query) => {
+export const searchUsers = async (params = {}) => {
   try {
-    const response = await axiosInstance.get(`/users/search?query=${query}`);
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    
+    if (params.query) queryParams.append("query", params.query);
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+    if (params.education) queryParams.append("education", params.education);
+    if (params.major) queryParams.append("major", params.major);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    const response = await axiosInstance.get(`/users/search${queryString}`);
+    
+    console.log("Search users response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error searching users:", error);

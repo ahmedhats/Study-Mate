@@ -11,17 +11,29 @@ const {
 } = require("./middlewares/error.middleware");
 const mongoose = require("mongoose");
 const http = require("http");
-const WebSocket = require("ws");
+const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 // Import models
 require("./models/user.model");
 require("./models/friendRequest.model");
+require("./models/conversation.model");
+require("./models/message.model");
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+
+// Initialize Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: true, // Allow any origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  },
+  transports: ['websocket', 'polling']
+});
 
 // Import routes
 const auth = require("./routers/auth.routes");
@@ -31,15 +43,27 @@ const email = require("./routers/email.route");
 const studySessions = require("./routers/studySession.routes");
 const stats = require("./routers/stats.routes");
 const social = require("./routers/social.routes");
+const userRouter = require("./routers/user.routes");
+// const adminRouter = require("./routers/admin.routes");
+// const qsRouter = require("./routers/qs.routes");
+// const communityRouter = require("./routers/community.routes");
+const messageRouter = require("./routers/message.routes");
+const conversationRouter = require("./routers/conversation.routes");
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:3002"],
+    origin: true, // Allow any origin
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
 
@@ -56,6 +80,12 @@ app.use("/api/email", email);
 app.use("/api/study-sessions", studySessions);
 app.use("/api/stats", stats);
 app.use("/api/social", social);
+app.use("/api/user", userRouter);
+// app.use("/api/admin", adminRouter);
+// app.use("/api/qs", qsRouter);
+// app.use("/api/community", communityRouter);
+app.use("/api/conversations", conversationRouter);
+app.use("/api", messageRouter);
 
 // 404 handler
 app.use((req, res, next) => {
@@ -68,76 +98,27 @@ app.use(errorConverter);
 // Handle error
 app.use(errorHandler);
 
-// WebSocket authentication middleware
-const authenticateWebSocket = (info, callback) => {
-  const token = info.req.url.split("token=")[1];
-  if (!token) {
-    callback(false, 401, "Unauthorized");
-    return;
-  }
+// Initialize Socket.IO Authentication Middleware
+io.use((socket, next) => {
+  // Attempt to get token from handshake query (preferred for Socket.IO)
+  // Fallback to auth header if needed, though query is more common for initial WS connection
+  const token = socket.handshake.query.token || socket.handshake.auth?.token;
 
+  if (!token) {
+    return next(new Error("Authentication error: Token not provided"));
+  }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    info.req.user = { _id: decoded.id };
-    callback(true);
-  } catch (error) {
-    callback(false, 401, "Unauthorized");
+    socket.userId = decoded.id; // Attach userId to the socket object
+    next();
+  } catch (err) {
+    next(new Error("Authentication error: Invalid token"));
   }
-};
-
-// WebSocket connection handling
-wss.on("connection", (ws, req) => {
-  // Safely access user ID if it exists, otherwise generate a temporary one
-  const userId = req.user && req.user._id ? req.user._id : `temp_${Date.now()}`;
-
-  // Store user's WebSocket connection
-  if (!wss.clients) wss.clients = new Map();
-  wss.clients.set(userId, ws);
-
-  ws.on("message", async (message) => {
-    try {
-      const data = JSON.parse(message);
-
-      switch (data.type) {
-        case "chat":
-          // Handle chat messages
-          const recipientWs = wss.clients.get(data.recipientId);
-          if (recipientWs) {
-            recipientWs.send(
-              JSON.stringify({
-                type: "chat",
-                senderId: userId,
-                message: data.message,
-                timestamp: new Date(),
-              })
-            );
-          }
-          break;
-
-        case "task_update":
-          // Handle task updates
-          wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-              client.send(
-                JSON.stringify({
-                  type: "task_update",
-                  taskId: data.taskId,
-                  update: data.update,
-                })
-              );
-            }
-          });
-          break;
-      }
-    } catch (error) {
-      console.error("WebSocket message error:", error);
-    }
-  });
-
-  ws.on("close", () => {
-    wss.clients.delete(userId);
-  });
 });
+
+// Import and use the main socket handler
+const initializeSocketHandler = require('./socket.handler'); 
+initializeSocketHandler(io);
 
 // Connect to MongoDB
 mongoose

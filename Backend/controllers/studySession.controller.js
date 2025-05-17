@@ -1,5 +1,21 @@
 const StudySession = require('../models/studySession.model');
 const { validateObjectId } = require('../utils/validation');
+const { createStudySessionConversation, deactivateStudySessionConversation, getConversationByStudySessionId } = require('../services/conversation.service');
+const { deleteMessagesForConversation } = require('../services/message.service');
+
+// Helper to get io instance - to avoid circular dependency with server.js
+// In a larger app, io might be passed around or set on the app instance.
+let ioInstance = null;
+const getIoInstance = () => {
+    if (!ioInstance) {
+        try {
+            ioInstance = require('../server').io;
+        } catch (e) {
+            console.warn("Socket.io instance (io) could not be imported directly in studySession.controller.js. Real-time events for chat end might not be emitted.");
+        }
+    }
+    return ioInstance;
+};
 
 // Get all study sessions
 exports.getAllStudySessions = async (req, res) => {
@@ -29,6 +45,15 @@ exports.createStudySession = async (req, res) => {
 
         const session = new StudySession(sessionData);
         await session.save();
+
+        // Create a conversation for the study session
+        try {
+            await createStudySessionConversation(session._id, [req.user._id]);
+        } catch (conversationError) {
+            // Log the error, but don't fail the entire session creation if conversation hook fails
+            // This could be made more robust, e.g., by queuing this or retrying
+            console.error(`Failed to create conversation for study session ${session._id}:`, conversationError);
+        }
 
         const populatedSession = await StudySession.findById(session._id)
             .populate('host', 'username name profileImage')
@@ -150,7 +175,7 @@ exports.leaveStudySession = async (req, res) => {
 // Update study session
 exports.updateStudySession = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // This is studySessionId
 
         if (!validateObjectId(id)) {
             return res.status(400).json({ message: "Invalid session ID" });
@@ -166,6 +191,9 @@ exports.updateStudySession = async (req, res) => {
             return res.status(403).json({ message: "Not authorized to update this session" });
         }
 
+        const oldStatus = session.status;
+        const newStatus = req.body.status;
+
         const updatedSession = await StudySession.findByIdAndUpdate(
             id,
             { ...req.body, updatedAt: Date.now() },
@@ -173,6 +201,32 @@ exports.updateStudySession = async (req, res) => {
         )
             .populate('host', 'username name profileImage')
             .populate('participants.user', 'username name profileImage');
+
+        // If session status changed to completed or cancelled, handle conversation cleanup
+        if (newStatus && oldStatus !== newStatus && (newStatus === 'completed' || newStatus === 'cancelled')) {
+            try {
+                const conversation = await getConversationByStudySessionId(id);
+                if (conversation) {
+                    await deactivateStudySessionConversation(id);
+                    await deleteMessagesForConversation(conversation._id);
+                    
+                    const io = getIoInstance();
+                    if (io) {
+                        io.to(conversation._id.toString()).emit('SERVER:STUDY_SESSION_CHAT_ENDED', {
+                            conversationId: conversation._id.toString(),
+                            studySessionId: id,
+                            status: newStatus
+                        });
+                        const socketsInRoom = await io.in(conversation._id.toString()).fetchSockets();
+                        socketsInRoom.forEach(socket => socket.leave(conversation._id.toString()));
+                    } else {
+                        console.warn(`Socket.io instance not available. SERVER:STUDY_SESSION_CHAT_ENDED for ${conversation._id} was not emitted.`);
+                    }
+                }
+            } catch (cleanupError) {
+                console.error(`Error cleaning up conversation for study session ${id}:`, cleanupError);
+            }
+        }
 
         res.json(updatedSession);
     } catch (error) {
@@ -183,7 +237,7 @@ exports.updateStudySession = async (req, res) => {
 // Delete study session
 exports.deleteStudySession = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // This is studySessionId
 
         if (!validateObjectId(id)) {
             return res.status(400).json({ message: "Invalid session ID" });
@@ -197,6 +251,29 @@ exports.deleteStudySession = async (req, res) => {
 
         if (session.host.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: "Not authorized to delete this session" });
+        }
+        
+        try {
+            const conversation = await getConversationByStudySessionId(id);
+            if (conversation) {
+                await deactivateStudySessionConversation(id);
+                await deleteMessagesForConversation(conversation._id);
+                
+                const io = getIoInstance();
+                if (io) {
+                    io.to(conversation._id.toString()).emit('SERVER:STUDY_SESSION_CHAT_ENDED', {
+                        conversationId: conversation._id.toString(),
+                        studySessionId: id,
+                        status: 'deleted' 
+                    });
+                    const socketsInRoom = await io.in(conversation._id.toString()).fetchSockets();
+                    socketsInRoom.forEach(socket => socket.leave(conversation._id.toString()));
+                } else {
+                    console.warn(`Socket.io instance not available. SERVER:STUDY_SESSION_CHAT_ENDED for ${conversation._id} (deleted session) was not emitted.`);
+                }
+            }
+        } catch (cleanupError) {
+            console.error(`Error cleaning up conversation for study session ${id} during deletion:`, cleanupError);
         }
 
         await StudySession.findByIdAndDelete(id);

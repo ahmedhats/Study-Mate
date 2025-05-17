@@ -105,7 +105,7 @@ const userSchema = new mongoose.Schema(
     friends: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users",
+        ref: "User",
       },
     ],
     teams: [
@@ -251,5 +251,5 @@ userSchema.index({ education: 1 });
 userSchema.index({ major: 1 });
 userSchema.index({ studyPreference: 1 });
 
-const User = mongoose.model("Users", userSchema);
+const User = mongoose.model("User", userSchema);
 module.exports = User;

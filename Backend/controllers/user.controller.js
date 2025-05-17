@@ -151,15 +151,8 @@ module.exports.deleteUser = async (req, res, next) => {
 // Search users
 module.exports.searchUsers = async (req, res) => {
   try {
-    const { query } = req.query;
-
-    if (!query || query.trim() === "") {
-      return res.status(400).json({
-        success: false,
-        message: "Search query is required",
-      });
-    }
-
+    const { query, page = 1, limit = 10, education, major } = req.query;
+    
     // Get the current user ID from the authenticated request
     const currentUserId = req.userId || req.user?._id;
 
@@ -170,34 +163,56 @@ module.exports.searchUsers = async (req, res) => {
       });
     }
 
-    // Create a regex pattern for case-insensitive search
-    const searchPattern = new RegExp(query.trim(), "i");
+    // Build the query filter
+    const filter = {
+      _id: { $ne: currentUserId.toString() }, // Not the current user
+    };
+    
+    // Add search query if provided
+    if (query && query.trim() !== "") {
+      const searchPattern = new RegExp(query.trim(), "i");
+      filter.$or = [
+        { name: searchPattern },
+        { email: searchPattern },
+        { username: searchPattern },
+      ];
+    }
+    
+    // Add education filter if provided
+    if (education) {
+      filter.education = education;
+    }
+    
+    // Add major filter if provided
+    if (major) {
+      filter.major = major;
+    }
 
-    console.log(`Searching for pattern: ${searchPattern}`);
-    console.log(`Current user ID: ${currentUserId}`);
+    console.log("Search filter:", filter);
+    
+    // Calculate pagination values
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageSize = parseInt(limit);
 
     // Find users matching the search criteria
-    // Exclude the current user from results
-    const users = await User.find({
-      $and: [
-        { _id: { $ne: currentUserId.toString() } }, // Not the current user
-        {
-          $or: [
-            { name: searchPattern },
-            { email: searchPattern },
-            { username: searchPattern },
-            { major: searchPattern },
-          ],
-        },
-      ],
-    }).select("_id name email major statistics.lastActive");
+    const users = await User.find(filter)
+      .select("_id name email major education studyPreference interests hobbies statistics.lastActive")
+      .skip(skip)
+      .limit(pageSize)
+      .sort({ name: 1 });
+    
+    // Get total count for pagination
+    const totalCount = await User.countDocuments(filter);
 
-    console.log(`Found ${users.length} users matching the search pattern`);
+    console.log(`Found ${users.length} users matching the criteria`);
 
     // Return matching users
     return res.status(200).json({
       success: true,
-      data: users,
+      users: users,
+      totalCount: totalCount,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalCount / pageSize)
     });
   } catch (error) {
     console.error("Error searching users:", error);

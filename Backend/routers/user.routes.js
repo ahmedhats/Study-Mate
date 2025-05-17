@@ -6,14 +6,18 @@ const auth = require("../middlewares/auth.middleware");
 // Public routes
 router.get("/search", auth.verifyToken, userController.searchUsers);
 router.get("/", userController.getAllUsers);
-router.get("/profile", userController.getOwnProfile);
+router.get("/profile", auth.verifyToken, userController.getOwnProfile);
+
+// Specific routes that could conflict with :id param
+router.get("/friends", auth.verifyToken, userController.getUserFriends);
+
+// User by ID route
 router.get("/:id", userController.getUserById);
 
 // Protected routes
-router.use(auth);
+router.use(auth.auth);
 router.put("/profile", userController.updateOwnProfile);
 router.put("/last-active", userController.updateLastActive);
-router.get("/friends", userController.getUserFriends);
 router.post("/", userController.createUser);
 router.put("/:id", userController.updateUser);
 router.delete("/:id", userController.deleteUser);

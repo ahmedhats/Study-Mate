@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, List, Tag, Typography } from "antd";
+import { Card, List, Tag, Typography, Empty } from "antd";
 import {
   BookOutlined,
   TeamOutlined,
@@ -10,7 +10,10 @@ import {
 const { Text } = Typography;
 
 const RecentActivity = ({ userData }) => {
-  const activities = userData?.recentActivities || [];
+  // Safely access recentActivities with proper array check
+  const activities = Array.isArray(userData?.recentActivities) 
+    ? userData.recentActivities 
+    : [];
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -48,28 +51,32 @@ const RecentActivity = ({ userData }) => {
       title="Recent Activity"
       bordered={false}
     >
-      <List
-        itemLayout="horizontal"
-        dataSource={activities}
-        renderItem={(activity) => (
-          <List.Item>
-            <List.Item.Meta
-              avatar={getActivityIcon(activity.type)}
-              title={
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {getActivityTag(activity.type)}
-                  <Text>{activity.description}</Text>
-                </div>
-              }
-              description={
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {new Date(activity.timestamp).toLocaleString()}
-                </Text>
-              }
-            />
-          </List.Item>
-        )}
-      />
+      {activities.length > 0 ? (
+        <List
+          itemLayout="horizontal"
+          dataSource={activities}
+          renderItem={(activity) => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={getActivityIcon(activity.type)}
+                title={
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {getActivityTag(activity.type)}
+                    <Text>{activity.description}</Text>
+                  </div>
+                }
+                description={
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {new Date(activity.timestamp).toLocaleString()}
+                  </Text>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Empty description="No recent activities" />
+      )}
     </Card>
   );
 };

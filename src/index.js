@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ConfigProvider } from "antd";
 import "./styles/index.css";
 import App from "./App";
+import { MessagingProvider } from './context/MessagingContext';
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -14,7 +15,9 @@ root.render(
       // Enable compatibility mode for React 19
       compatible: true
     }}>
-      <App />
+      <MessagingProvider>
+        <App />
+      </MessagingProvider>
     </ConfigProvider>
   </React.StrictMode>
 );

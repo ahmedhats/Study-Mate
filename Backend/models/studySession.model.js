@@ -16,13 +16,13 @@ const studySessionSchema = new mongoose.Schema({
     },
     host: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Users',
+        ref: 'User',
         required: true
     },
     participants: [{
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Users'
+            ref: 'User'
         },
         joinedAt: {
             type: Date,
@@ -66,7 +66,7 @@ const studySessionSchema = new mongoose.Schema({
     chat: [{
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Users',
+            ref: 'User',
             required: true
         },
         message: {
@@ -85,7 +85,7 @@ const studySessionSchema = new mongoose.Schema({
         type: String,
         uploadedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Users'
+            ref: 'User'
         },
         uploadedAt: {
             type: Date,
@@ -109,6 +109,6 @@ studySessionSchema.index({ status: 1, startTime: 1 });
 studySessionSchema.index({ host: 1, status: 1 });
 studySessionSchema.index({ 'participants.user': 1 });
 
-const StudySession = mongoose.model('StudySessions', studySessionSchema);
+const StudySession = mongoose.model('StudySession', studySessionSchema);
 
 module.exports = StudySession; 

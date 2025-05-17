@@ -359,3 +359,131 @@
   padding: 8px 15px;
   line-height: 1.5;
 }
+
+/* Messaging feature styles */
+.conversation-item {
+  cursor: pointer;
+  transition: background-color 0.3s;
+  padding: 12px 16px;
+  margin: 0;
+}
+
+.conversation-item:hover {
+  background-color: #f5f5f5;
+}
+
+.conversation-item.selected {
+  background-color: #e6f7ff;
+  border-right: 3px solid #1890ff;
+}
+
+/* Message styling */
+.message-item {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.message-item.message-mine .message-content {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+  margin-left: auto;
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+  padding-right: 16px;
+}
+
+.message-content {
+  background-color: #f0f0f0;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: 70%;
+  margin-top: 4px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  color: #8c8c8c;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.message-sender {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+/* Typing indicator animation */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 16px;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-radius: 12px;
+  color: #8c8c8c;
+}
+
+.typing-dots {
+  display: inline-flex;
+  margin-left: 8px;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  margin: 0 2px;
+  background-color: #8c8c8c;
+  border-radius: 50%;
+  animation: typingAnimation 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingAnimation {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Read receipts */
+.read-receipts {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.read-receipt-avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: 2px;
+  border: 1px solid #f0f0f0;
+}
+
+/* Responsive tweaks for messaging */
+@media (max-width: 768px) {
+  .message-content {
+    max-width: 85%;
+  }
+}

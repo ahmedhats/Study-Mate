@@ -36,6 +36,7 @@ import {
 import { sendFriendRequest, getRecommendedFriends } from "../../../../services/api/socialService";
 import { formatLastActive, isUserOnline } from "../../../../utils/dateFormatter";
 import "./RecommendedFriends.css";
+import DirectMessageButton from "../../../../components/features/messaging/DirectMessageButton";
 
 const { Text, Title, Paragraph } = Typography;
 const { Option } = Select;
@@ -224,6 +225,13 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
           <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
           <Title level={2}>{user.name}</Title>
           <Text type="secondary">{user.email}</Text>
+          <div style={{ marginTop: '12px' }}>
+            <DirectMessageButton 
+              userId={user._id} 
+              type="primary" 
+              showText={true}
+            />
+          </div>
         </div>
 
         <Divider />

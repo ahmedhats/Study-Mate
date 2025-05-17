@@ -10,6 +10,7 @@ import {
 import Sidebar from "./components/layout/sidebar";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import ActivityTracker from "./components/common/ActivityTracker";
+import NotificationHub from "./components/common/NotificationHub";
 import "./styles/App.css";
 
 // Lazy load all components
@@ -22,6 +23,7 @@ const Tasks = React.lazy(() => import("./pages/Tasks"));
 const CalendarPage = React.lazy(() => import("./pages/CalendarPage"));
 const Search = React.lazy(() => import("./pages/Search"));
 const Inbox = React.lazy(() => import("./pages/Inbox"));
+const MessagingPage = React.lazy(() => import("./components/features/messaging/MessagingPage"));
 const MineDesign = React.lazy(() => import("./pages/mine-design/MineDesign"));
 const Purweb = React.lazy(() => import("./pages/purweb/Purweb"));
 const Welcome = React.lazy(() => import("./pages/Welcome"));
@@ -34,6 +36,7 @@ const VerifyEmail = React.lazy(() => import("./pages/auth/VerifyEmail"));
 const CommunityDetailPage = React.lazy(() =>
   import("./pages/CommunityDetailPage")
 );
+const Users = React.lazy(() => import("./pages/Users"));
 
 const { Content } = Layout;
 
@@ -175,6 +178,8 @@ const App = () => {
         <Suspense fallback={<LoadingFallback />}>
           {/* Activity tracker to update last active status */}
           <ActivityTracker />
+          {/* Notification Hub for real-time notifications */}
+          <NotificationHub />
           <Routes>
             {/* Public Routes */}
             <Route
@@ -369,6 +374,40 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <CommunityDetailPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add MessagingPage routes here */}
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <MessagingPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages/:conversationId"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <MessagingPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Add Users route for creating new conversations */}
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Users />
                   </MainLayout>
                 </ProtectedRoute>
               }
