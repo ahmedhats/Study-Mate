@@ -12,6 +12,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 import ActivityTracker from "./components/common/ActivityTracker";
 import NotificationHub from "./components/common/NotificationHub";
 import "./styles/App.css";
+import DirectVideoTest from "./components/features/studySessions/DirectVideoTest";
 
 // Lazy load all components
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
@@ -35,6 +36,10 @@ const ProfileSetup = React.lazy(() => import("./pages/auth/profilesetup"));
 const VerifyEmail = React.lazy(() => import("./pages/auth/VerifyEmail"));
 const CommunityDetailPage = React.lazy(() =>
   import("./pages/CommunityDetailPage")
+);
+const StudySession = React.lazy(() => import("./pages/StudySession"));
+const AgoraStudyRoom = React.lazy(() =>
+  import("./components/features/studySessions/AgoraStudyRoom")
 );
 const Users = React.lazy(() => import("./pages/Users"));
 
@@ -222,6 +227,14 @@ const App = () => {
                 </AuthLayout>
               }
             />
+            <Route
+              path="/video-test"
+              element={
+                <AuthLayout>
+                  <DirectVideoTest />
+                </AuthLayout>
+              }
+            />
 
             {/* Protected Routes */}
             <Route
@@ -374,6 +387,30 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <CommunityDetailPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Study Sessions route */}
+            <Route
+              path="/study-sessions"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <StudySession />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Study Session Room route */}
+            <Route
+              path="/study-session/:sessionId"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <AgoraStudyRoom />
                   </MainLayout>
                 </ProtectedRoute>
               }

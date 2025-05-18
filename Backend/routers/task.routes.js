@@ -11,6 +11,7 @@ router.use(auth);
 router.get("/", taskController.getTasks);
 router.post("/", taskController.createTask);
 router.get("/search", taskController.searchTasks);
+router.get("/schedule", taskController.generateSchedule);
 router.get("/:id", taskController.getTask);
 router.put("/:id", taskController.updateTask);
 router.delete("/:id", taskController.deleteTask);

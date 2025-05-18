@@ -16,7 +16,42 @@ export const getUserProfile = async () => {
 
     // If the API returned a success property, return the data field
     if (response.data && response.data.success === true) {
-      return response.data;
+      const apiData = response.data.data || response.data;
+
+      // Merge with localStorage data to ensure no data loss
+      try {
+        const localStorageData = localStorage.getItem("userData");
+        if (localStorageData) {
+          const parsedLocalData = JSON.parse(localStorageData);
+          const localUserData = parsedLocalData.user || parsedLocalData;
+
+          // Create merged data, prioritizing API data but ensuring we preserve
+          // profile setup data like education, major, etc. if it exists in localStorage
+          // but is missing in the API response
+          const mergedData = {
+            ...localUserData,
+            ...apiData,
+            // Ensure profile setup data is preserved
+            education: apiData.education || localUserData.education || "",
+            major: apiData.major || localUserData.major || "",
+            interests: apiData.interests || localUserData.interests || [],
+            hobbies: apiData.hobbies || localUserData.hobbies || [],
+            studyPreference:
+              apiData.studyPreference || localUserData.studyPreference || "",
+            studyGoals: apiData.studyGoals || localUserData.studyGoals || "",
+            profileCompleted:
+              apiData.profileCompleted ||
+              localUserData.profileCompleted ||
+              false,
+          };
+
+          return mergedData;
+        }
+      } catch (localStorageError) {
+        console.error("Error merging localStorage data:", localStorageError);
+      }
+
+      return apiData;
     }
 
     // Otherwise return the entire response data
@@ -30,7 +65,18 @@ export const getUserProfile = async () => {
       if (userData) {
         console.log("Using localStorage data as fallback");
         const parsedData = JSON.parse(userData);
-        return parsedData.user || parsedData;
+        const userDataObj = parsedData.user || parsedData;
+
+        // Ensure critical profile fields are defined
+        return {
+          ...userDataObj,
+          education: userDataObj.education || "",
+          major: userDataObj.major || "",
+          interests: userDataObj.interests || [],
+          hobbies: userDataObj.hobbies || [],
+          studyPreference: userDataObj.studyPreference || "",
+          studyGoals: userDataObj.studyGoals || "",
+        };
       }
     } catch (localStorageError) {
       console.error("Error reading from localStorage:", localStorageError);
@@ -45,6 +91,33 @@ export const updateUserProfile = async (userData) => {
     console.log("Sending profile update to API:", userData);
     const response = await axiosInstance.put("/users/profile", userData);
     console.log("Profile update API response:", response.data);
+
+    // Also update localStorage with the new profile data
+    try {
+      const localStorageData = localStorage.getItem("userData");
+      if (localStorageData) {
+        const parsedData = JSON.parse(localStorageData);
+
+        // Update user data in localStorage
+        if (parsedData.user) {
+          // If userData has nested user object
+          parsedData.user = {
+            ...parsedData.user,
+            ...userData,
+            profileCompleted: true, // Ensure profileCompleted is set to true
+          };
+        } else {
+          // If userData is flat
+          Object.assign(parsedData, userData, { profileCompleted: true });
+        }
+
+        localStorage.setItem("userData", JSON.stringify(parsedData));
+        console.log("Updated localStorage with new profile data");
+      }
+    } catch (localStorageError) {
+      console.error("Error updating localStorage:", localStorageError);
+    }
+
     return response.data;
   } catch (error) {
     console.error("Error updating user profile:", error);

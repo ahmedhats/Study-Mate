@@ -360,6 +360,54 @@
   line-height: 1.5;
 }
 
+/* AI Assistant Styles */
+.ai-assistant-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.ai-assistant-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.ai-input-section {
+  background: #f8f9fa;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ai-examples {
+  margin-top: 32px;
+}
+
+.ai-examples .ant-list-item {
+  padding: 12px 16px;
+}
+
+.ai-features {
+  margin-top: 32px;
+}
+
+.ai-features .ant-tag {
+  margin: 4px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+/* Responsive styles for AI Assistant */
+@media (max-width: 768px) {
+  .ai-assistant-container {
+    padding: 16px;
+  }
+
+  .ai-input-section {
+    padding: 16px;
+  }
+}
+
 /* Messaging feature styles */
 .conversation-item {
   cursor: pointer;

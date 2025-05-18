@@ -30,6 +30,7 @@ import {
   UserOutlined,
   CalendarOutlined,
   MessageOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import "../../styles/sidebar.css";
 
@@ -192,6 +193,12 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     ), // Messaging feature
     getItem("My Task", "my-task", <CheckSquareOutlined />, "/tasks"), // Example path
     getItem("Calendar", "calendar", <CalendarOutlined />, "/calendar"), // New Calendar item
+    getItem(
+      "Study Sessions",
+      "study-sessions",
+      <VideoCameraOutlined />,
+      "/study-sessions"
+    ), // Study Sessions
     getItem("Social", "social", <TeamOutlined />, "/profile/social"), // Updated label and path
 
     getItem("Teamspaces", "grp2", null, null, null, "group"), // Group title

@@ -149,4 +149,79 @@ taskSchema.index({ createdBy: 1, status: 1 });
 taskSchema.index({ importance: 1 });
 taskSchema.index({ "teamMembers.user": 1 });
 
-const Task = mongoose.model("Task", taskSchema);module.exports = Task;
+// Pre-save hook to update importance based on deadline proximity
+taskSchema.pre('save', function(next) {
+  // Skip if importance is explicitly set
+  if (this.isModified('importance')) {
+    return next();
+  }
+
+  const now = new Date();
+  const dueDate = this.dueDate ? new Date(this.dueDate) : null;
+  
+  if (!dueDate) {
+    this.importance = 'normal';
+    return next();
+  }
+
+  const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+  
+  // Base importance from priority
+  let importanceLevel = this.priority === 'urgent' ? 3 :
+                       this.priority === 'high' ? 2 : 1;
+  
+  // Adjust importance based on deadline proximity
+  if (daysUntilDue <= 1) { // Due within 24 hours
+    importanceLevel += 2;
+  } else if (daysUntilDue <= 3) { // Due within 3 days
+    importanceLevel += 1;
+  }
+  
+  // Map final importance level
+  if (importanceLevel >= 4) this.importance = 'critical';
+  else if (importanceLevel === 3) this.importance = 'important';
+  else if (importanceLevel === 2) this.importance = 'normal';
+  else this.importance = 'optional';
+
+  next();
+});
+
+// Pre-save hook to update importance based on deadline proximity
+taskSchema.pre('save', function(next) {
+  // Skip if importance is explicitly set
+  if (this.isModified('importance')) {
+    return next();
+  }
+
+  const now = new Date();
+  const dueDate = this.dueDate ? new Date(this.dueDate) : null;
+  
+  if (!dueDate) {
+    this.importance = 'normal';
+    return next();
+  }
+
+  const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+  
+  // Base importance from priority
+  let importanceLevel = this.priority === 'urgent' ? 3 :
+                       this.priority === 'high' ? 2 : 1;
+  
+  // Adjust importance based on deadline proximity
+  if (daysUntilDue <= 1) { // Due within 24 hours
+    importanceLevel += 2;
+  } else if (daysUntilDue <= 3) { // Due within 3 days
+    importanceLevel += 1;
+  }
+  
+  // Map final importance level
+  if (importanceLevel >= 4) this.importance = 'critical';
+  else if (importanceLevel === 3) this.importance = 'important';
+  else if (importanceLevel === 2) this.importance = 'normal';
+  else this.importance = 'optional';
+
+  next();
+});
+
+const Task = mongoose.model("Task", taskSchema);
+module.exports = Task;

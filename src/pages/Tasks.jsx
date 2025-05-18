@@ -12,12 +12,14 @@ import {
   Button,
   Tabs,
 } from "antd";
-import { CalendarOutlined } from "@ant-design/icons";
+import { CalendarOutlined, RobotOutlined, OrderedListOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import TaskModal from "../components/features/tasks/TaskModal";
 import TaskHeader from "../components/features/tasks/TaskHeader";
 import TaskList from "../components/features/tasks/TaskList";
 import TodoList from "../components/features/tasks/TodoList";
+import AIAssistant from "../components/features/tasks/AIAssistant";
+import TaskManager from '../components/features/tasks/TaskManager';
 import {
   getAllTasks,
   createTask,
@@ -529,6 +531,24 @@ const TasksPage = () => {
     setIsModalVisible(true);
   };
 
+  const handleAICreateTask = async (taskData) => {
+    try {
+      const response = await createTask(taskData);
+      if (!response.data || !response.data.success) {
+        throw new Error(response.data?.message || "Task creation failed");
+      }
+      websocketService.sendTaskUpdate(
+        response.data.data._id,
+        response.data.data
+      );
+      message.success("Task added successfully");
+      await fetchTasks();
+    } catch (error) {
+      message.error("Failed to create task: " + error.message);
+      console.error("Error creating task:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div
@@ -625,9 +645,7 @@ const TasksPage = () => {
                   onChange={(e) => setSortBy(e.target.value)}
                 >
                   <Radio.Button value="dueDate">Sort by Due Date</Radio.Button>
-                  <Radio.Button value="importance">
-                    Sort by Importance
-                  </Radio.Button>
+                  <Radio.Button value="importance">Sort by Importance</Radio.Button>
                   <Radio.Button value="priority">Sort by Priority</Radio.Button>
                 </Radio.Group>
               </Col>
@@ -654,6 +672,32 @@ const TasksPage = () => {
               onAddNewTodo={handleAddNewTask}
               currentUser={currentUser}
             />
+          </TabPane>
+
+          <TabPane
+            tab={
+              <span>
+                <OrderedListOutlined />
+                Tasks
+              </span>
+            }
+            key="tasks"
+          >
+            <div style={{ marginBottom: 24 }}>
+              <TaskManager tasks={tasks} />
+            </div>
+          </TabPane>
+
+          <TabPane
+            tab={
+              <span>
+                <RobotOutlined />
+                AI Assistant
+              </span>
+            }
+            key="ai"
+          >
+            <AIAssistant onCreateTask={handleAICreateTask} />
           </TabPane>
         </Tabs>
       </Card>

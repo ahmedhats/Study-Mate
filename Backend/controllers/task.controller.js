@@ -1,9 +1,174 @@
 const Task = require("../models/task.model");
 const ApiError = require("../utils/ApiError");
 const httpStatus = require("http-status");
+const { spawn } = require('child_process');
+const path = require('path');
+
+// Helper function to run Python scheduler
+const aiScheduleTasks = async (tasks, maxHoursPerDay) => {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python', [
+      path.join(__dirname, '../Algorithms/taskmanager.py'),
+      JSON.stringify({ tasks, maxHoursPerDay })
+    ]);
+
+    let result = '';
+    let error = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      result += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Python process exited with code ${code}: ${error}`));
+      } else {
+        try {
+          resolve(JSON.parse(result));
+        } catch (e) {
+          reject(new Error('Failed to parse Python output: ' + e.message));
+        }
+      }
+    });
+  });
+};
+
+// Helper function to calculate task priority score
+const calculateTaskScore = (task) => {
+  const now = new Date();
+  const dueDate = new Date(task.dueDate);
+  const daysUntilDue = Math.max(0, Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24)));
+
+  // Priority weights
+  const priorityWeights = {
+    urgent: 4,
+    high: 3,
+    medium: 2,
+    low: 1
+  };
+
+  // Importance weights
+  const importanceWeights = {
+    critical: 4,
+    important: 3,
+    normal: 2,
+    optional: 1
+  };
+
+  // Calculate base score
+  let score = priorityWeights[task.priority] * 10 + importanceWeights[task.importance] * 5;
+
+  // Add urgency factor based on due date
+  if (daysUntilDue <= 1) {
+    score *= 2; // Double score for tasks due within 24 hours
+  } else if (daysUntilDue <= 3) {
+    score *= 1.5; // 1.5x score for tasks due within 3 days
+  }
+
+  return score;
+};
+
+// Generate schedule for tasks
+const generateSchedule = async (req, res) => {
+  try {
+    const maxHoursPerDay = parseInt(req.query.maxHoursPerDay) || 5;
+    
+    // Get all incomplete tasks for the user
+    const tasks = await Task.find({
+      $or: [
+        { createdBy: req.user._id },
+        { 'teamMembers.user': req.user._id }
+      ],
+      status: { $ne: 'completed' }
+    }).sort({ dueDate: 1 });
+
+    if (!tasks.length) {
+      return res.json({
+        success: true,
+        data: {
+          schedule: {},
+          unscheduled_tasks: []
+        }
+      });
+    }
+
+    // Calculate scores and prepare tasks for scheduling
+    const tasksWithScores = tasks.map(task => ({
+      _id: task._id,
+      name: task.title,
+      priority: task.priority,
+      importance: task.importance,
+      dueDate: task.dueDate,
+      estimatedTime: task.estimatedTime || 1, // Default to 1 hour if not specified
+      score: calculateTaskScore(task),
+      progress: task.progress || 0
+    }));
+
+    // Sort tasks by score (highest priority first)
+    tasksWithScores.sort((a, b) => b.score - a.score);
+
+    // Generate schedule
+    const schedule = {};
+    const unscheduledTasks = [];
+    const startHour = 9; // Start at 9 AM
+
+    for (const task of tasksWithScores) {
+      const taskDate = new Date(task.dueDate);
+      const dateStr = taskDate.toISOString().split('T')[0];
+      
+      // Initialize the day's schedule if it doesn't exist
+      if (!schedule[dateStr]) {
+        schedule[dateStr] = [];
+      }
+
+      // Calculate total hours already scheduled for this day
+      const scheduledHours = schedule[dateStr].reduce((sum, t) => sum + t.time, 0);
+
+      // Check if we can fit this task
+      if (scheduledHours + task.estimatedTime <= maxHoursPerDay) {
+        // Calculate start time
+        const startTime = `${startHour + scheduledHours}:00`;
+        const endTime = `${startHour + scheduledHours + task.estimatedTime}:00`;
+
+        schedule[dateStr].push({
+          ...task,
+          time: task.estimatedTime,
+          start_time: startTime,
+          end_time: endTime,
+          days_until_deadline: Math.ceil((taskDate - new Date()) / (1000 * 60 * 60 * 24))
+        });
+      } else {
+        unscheduledTasks.push({
+          ...task,
+          days_until_deadline: Math.ceil((taskDate - new Date()) / (1000 * 60 * 60 * 24))
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        schedule,
+        unscheduled_tasks: unscheduledTasks
+      }
+    });
+
+  } catch (error) {
+    console.error('Schedule generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating schedule',
+      error: error.message
+    });
+  }
+};
 
 // Get all tasks for the authenticated user (created by or has permission to)
-exports.getTasks = async (req, res, next) => {
+const getTasks = async (req, res, next) => {
   try {
     // Find tasks either created by the user or where the user is in teamMembers
     const tasks = await Task.find({
@@ -19,7 +184,7 @@ exports.getTasks = async (req, res, next) => {
 };
 
 // Get a single task
-exports.getTask = async (req, res, next) => {
+const getTask = async (req, res, next) => {
   try {
     const task = await Task.findOne({
       _id: req.params.id,
@@ -39,7 +204,7 @@ exports.getTask = async (req, res, next) => {
 };
 
 // Create a new task
-exports.createTask = async (req, res, next) => {
+const createTask = async (req, res, next) => {
   try {
     // If importance is not provided, set a default based on priority
     if (!req.body.importance) {
@@ -107,7 +272,7 @@ const hasEditPermission = async (userId, taskId) => {
 };
 
 // Update a task
-exports.updateTask = async (req, res, next) => {
+const updateTask = async (req, res, next) => {
   try {
     // Check if user has permission to edit
     const canEdit = await hasEditPermission(req.user._id, req.params.id);
@@ -116,6 +281,29 @@ exports.updateTask = async (req, res, next) => {
         httpStatus.FORBIDDEN,
         "You do not have permission to edit this task"
       );
+    }
+
+    // If due date is being updated, recalculate importance unless explicitly set
+    if (req.body.dueDate && !req.body.importance) {
+      const now = new Date();
+      const dueDate = new Date(req.body.dueDate);
+      const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+      
+      // Base importance from priority
+      let importanceLevel = req.body.priority === 'urgent' ? 3 :
+                          req.body.priority === 'high' ? 2 : 1;
+      
+      // Adjust importance based on deadline proximity
+      if (daysUntilDue <= 1) { // Due within 24 hours
+        importanceLevel += 2;
+      } else if (daysUntilDue <= 3) { // Due within 3 days
+        importanceLevel += 1;
+      }
+      
+      // Map final importance level
+      req.body.importance = importanceLevel >= 4 ? 'critical' :
+                          importanceLevel === 3 ? 'important' :
+                          importanceLevel === 2 ? 'normal' : 'optional';
     }
 
     const task = await Task.findByIdAndUpdate(req.params.id, req.body, {
@@ -136,7 +324,7 @@ exports.updateTask = async (req, res, next) => {
 };
 
 // Delete a task
-exports.deleteTask = async (req, res, next) => {
+const deleteTask = async (req, res, next) => {
   try {
     // Only creator or team members with admin permission can delete
     const task = await Task.findById(req.params.id);
@@ -175,7 +363,7 @@ exports.deleteTask = async (req, res, next) => {
 };
 
 // Search tasks
-exports.searchTasks = async (req, res, next) => {
+const searchTasks = async (req, res, next) => {
   try {
     const { query, importance, priority, startDate, endDate } = req.query;
 
@@ -234,7 +422,7 @@ exports.searchTasks = async (req, res, next) => {
 };
 
 // Add team member to task
-exports.addTeamMember = async (req, res, next) => {
+const addTeamMember = async (req, res, next) => {
   try {
     const { taskId } = req.params;
     const { userId, permissions } = req.body;
@@ -276,7 +464,7 @@ exports.addTeamMember = async (req, res, next) => {
 };
 
 // Update team member permissions
-exports.updateTeamMember = async (req, res, next) => {
+const updateTeamMember = async (req, res, next) => {
   try {
     const { taskId, userId } = req.params;
     const { permissions } = req.body;
@@ -329,7 +517,7 @@ exports.updateTeamMember = async (req, res, next) => {
 };
 
 // Remove team member
-exports.removeTeamMember = async (req, res, next) => {
+const removeTeamMember = async (req, res, next) => {
   try {
     const { taskId, userId } = req.params;
 
@@ -381,4 +569,52 @@ exports.removeTeamMember = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// Get AI generated schedule
+const getAISchedule = async (req, res, next) => {
+  try {
+    // Get tasks for the user
+    const tasks = await Task.find({
+      $or: [{ createdBy: req.user._id }, { "teamMembers.user": req.user._id }],
+    });
+
+    // Format tasks for the scheduler
+    const formattedTasks = tasks.map(task => ({
+      name: task.title,
+      time: task.estimatedTime || 1, // Default to 1 hour if not specified
+      deadline: task.dueDate,
+      priority: task.priority,
+      importance: task.importance,
+      _id: task._id.toString(),
+      progress: task.progress || 0
+    }));
+
+    // Get max hours per day from query params or use default
+    const maxHoursPerDay = parseInt(req.query.maxHoursPerDay) || 5;
+
+    // Generate schedule using Python scheduler
+    const scheduleResult = await aiScheduleTasks(formattedTasks, maxHoursPerDay);
+
+    res.json({ 
+      success: true, 
+      data: scheduleResult
+    });
+  } catch (error) {
+    console.error('Schedule generation error:', error);
+    next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to generate schedule: ' + error.message));
+  }
+};
+
+module.exports = {
+  getTasks,
+  getTask,
+  createTask,
+  updateTask,
+  deleteTask,
+  searchTasks,
+  addTeamMember,
+  updateTeamMember,
+  removeTeamMember,
+  generateSchedule,
 };

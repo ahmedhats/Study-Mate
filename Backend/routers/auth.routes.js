@@ -42,4 +42,7 @@ router.post('/test-email', async (req, res) => {
     }
 });
 
+// Google OAuth login
+router.post('/google', require('../controllers/auth.controller').googleLogin);
+
 module.exports = router;
