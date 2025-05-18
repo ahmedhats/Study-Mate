@@ -113,15 +113,18 @@ io.use((socket, next) => {
   if (!token) {
     // Allow connection without auth for now, with limited functionality
     socket.user = { _id: null, anonymous: true };
+    socket.userId = null; // Set userId as well for handler compatibility
     return next();
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = { _id: decoded.id, anonymous: false };
+    socket.userId = decoded.id; // Set userId directly for socket.handler.js compatibility
     next();
   } catch (error) {
     // Allow connection without auth for now, with limited functionality
     socket.user = { _id: null, anonymous: true };
+    socket.userId = null; // Set userId as well for handler compatibility
     next();
   }
 });

@@ -104,6 +104,7 @@ const ChatContainer = ({
   };
 
   const handleSendMessage = async () => {
+    console.log('ChatContainer: handleSendMessage called', { newMessage, canSendMessages, currentUser, conversationId });
     if (!newMessage.trim() || !canSendMessages || !currentUser) return;
 
     setIsSending(true);
@@ -253,6 +254,7 @@ const ChatContainer = ({
               placeholder="Type a message..."
               autoSize={{ minRows: 1, maxRows: 4 }}
               onPressEnter={(e) => {
+                console.log('ChatContainer: TextArea onPressEnter triggered');
                 if (!e.shiftKey) {
                   e.preventDefault();
                   handleSendMessage();
@@ -262,7 +264,10 @@ const ChatContainer = ({
             <Button
               type="primary"
               icon={<SendOutlined />}
-              onClick={handleSendMessage}
+              onClick={() => {
+                console.log('ChatContainer: Send Button onClick triggered');
+                handleSendMessage();
+              }}
               loading={isSending}
             />
           </Space.Compact>

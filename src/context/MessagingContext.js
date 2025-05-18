@@ -249,6 +249,12 @@ export const MessagingProvider = ({ children }) => {
       if (currentServiceConnected !== socketConnected) {
         console.log(`MessagingContext: Syncing socket status. Service: ${currentServiceConnected}, Context: ${socketConnected} -> ${currentServiceConnected}`);
         setSocketConnected(currentServiceConnected);
+        
+        // When connection is established, join the active conversation room if needed
+        if (currentServiceConnected && activeConversationId) {
+          console.log('MessagingContext: Socket reconnected, rejoining conversation room:', activeConversationId);
+          websocketService.sendMessage('CLIENT:JOIN_ROOM', { conversationId: activeConversationId });
+        }
       }
     }, 1000);
 
@@ -257,7 +263,7 @@ export const MessagingProvider = ({ children }) => {
       clearInterval(intervalId);
       // Do NOT disconnect the socket here
     };
-  }, [currentUser, socketConnected]); // socketConnected needed because we read its value
+  }, [currentUser, socketConnected, activeConversationId]); // dependencies needed because we read their values
 
   // Subscription management effect - depends on socketConnected and handlers
   useEffect(() => {
@@ -381,15 +387,22 @@ export const MessagingProvider = ({ children }) => {
     
     setActiveConversationId(conversationId);
     
+    // Join the socket.io room for this conversation
+    if (conversationId && socketConnected) {
+      console.log('MessagingContext: Joining conversation room:', conversationId);
+      websocketService.sendMessage('CLIENT:JOIN_ROOM', { conversationId });
+    }
+    
     // Only store valid conversations
     if (conversationId && conversations.some(c => c._id === conversationId)) {
       setStoredActiveConversation(conversationId);
     } else if (!conversationId) {
       setStoredActiveConversation(null);
     }
-  }, [activeConversationId, conversations]);
+  }, [activeConversationId, conversations, socketConnected]);
 
   const sendMessage = useCallback(async (conversationId, messageContent) => {
+    console.log('MessagingContext: sendMessage called', { conversationId, messageContent, currentUser, socketConnected });
     if (!currentUser || !socketConnected) { // Check auth and connection
       console.error('User not authenticated or socket not connected. Cannot send message.');
       setError({ type: 'auth/socket', message: 'Cannot send message. Login or check connection.' });
@@ -400,6 +413,7 @@ export const MessagingProvider = ({ children }) => {
       return;
     }
     try {
+      console.log('MessagingContext: Attempting to send via websocketService.sendMessage', { conversationId, content: messageContent });
       await websocketService.sendMessage('CLIENT:SEND_MESSAGE', { conversationId, content: messageContent });
     } catch (error) {
       console.error('Error in sendMessage action:', error);

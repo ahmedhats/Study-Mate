@@ -51,6 +51,9 @@ class WebSocketService {
         auth: {
           token
         },
+        query: {
+          token
+        },
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: 1000,
@@ -125,6 +128,7 @@ class WebSocketService {
       }
 
       try {
+        console.log(`websocketService: Emitting event '${event}' with data:`, data);
         this.socket.emit(event, data);
         resolve();
       } catch (error) {
