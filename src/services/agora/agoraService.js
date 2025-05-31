@@ -345,30 +345,73 @@ const agoraService = {
 
       // Create local audio and video tracks
       try {
-        [localAudioTrack, localVideoTrack] =
-          await AgoraRTC.createMicrophoneAndCameraTracks({
-            // Specify camera and microphone settings for better reliability
+        // First check if we have camera access
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+
+        if (!hasVideoDevice) {
+          throw new Error('No camera device found');
+        }
+
+        // Try to create tracks with enhanced error handling
+        try {
+          // First try to get a test stream to verify camera access
+          const testStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: "user"
+            }
+          });
+
+          // Stop the test stream
+          testStream.getTracks().forEach(track => track.stop());
+
+          // Now create the Agora tracks
+          [localAudioTrack, localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks({
             microphoneConfig: {
-              AEC: true, // Echo cancellation
-              AGC: true, // Auto gain control
-              ANS: true, // Automatic noise suppression
+              AEC: true,
+              AGC: true,
+              ANS: true,
             },
             cameraConfig: {
-              facingMode: "user", // Front camera
-              optimizationMode: "detail", // Quality over performance
+              facingMode: "user",
+              optimizationMode: "detail",
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
             },
           });
-      } catch (mediaError) {
-        console.error("Error accessing media devices:", mediaError);
 
-        // Try to continue with just audio if video fails
-        try {
-          localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-          console.log("Created audio-only track");
-        } catch (audioError) {
-          console.error("Could not access microphone:", audioError);
-          // Continue without media tracks
+          // Verify the video track is working
+          if (localVideoTrack) {
+            const videoElement = document.createElement('video');
+            videoElement.style.display = 'none';
+            document.body.appendChild(videoElement);
+
+            try {
+              await localVideoTrack.play(videoElement);
+              videoElement.remove();
+              console.log('Video track verified successfully');
+            } catch (playError) {
+              console.error('Video track verification failed:', playError);
+              throw new Error('Failed to initialize video track');
+            }
+          }
+        } catch (trackError) {
+          console.error('Error creating media tracks:', trackError);
+
+          // Try to recover with just audio if video fails
+          try {
+            localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+            console.log('Created audio-only track after video failure');
+          } catch (audioError) {
+            console.error('Could not access microphone:', audioError);
+            throw new Error('Failed to access any media devices');
+          }
         }
+      } catch (mediaError) {
+        console.error('Error accessing media devices:', mediaError);
+        throw mediaError;
       }
 
       // Ensure local-video element exists before trying to play

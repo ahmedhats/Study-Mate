@@ -13,6 +13,8 @@ const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const multer = require('multer');
+const path = require('path');
 require("dotenv").config();
 
 // Import models
@@ -78,6 +80,44 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Serve uploaded files statically
+app.use('/uploads', express.static('uploads'));
+
+// Multer storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/avatars/'); // Make sure this folder exists
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, Date.now() + ext);
+  }
+});
+const upload = multer({ storage });
+
+// Import auth middleware
+const authMiddleware = require("./middlewares/auth.middleware");
+const User = require("./models/user.model");
+
+// The upload endpoint (now with auth and DB update)
+app.post('/api/user/upload-avatar', authMiddleware.auth, upload.single('avatar'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const imageUrl = `/uploads/avatars/${req.file.filename}`;
+    // Update the user's profileImage in the DB
+    const userId = req.userId || req.user._id;
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profileImage: imageUrl },
+      { new: true }
+    ).select('-password -resetPasswordToken -resetPasswordExpires');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ imageUrl, user });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // API routes
 app.use("/api/auth", auth);
 app.use("/api/tasks", tasks);
@@ -130,7 +170,7 @@ io.use((socket, next) => {
 });
 
 // Import and use the main socket handler
-const initializeSocketHandler = require('./socket.handler'); 
+const initializeSocketHandler = require('./socket.handler');
 initializeSocketHandler(io);
 
 // Socket.IO connection handling

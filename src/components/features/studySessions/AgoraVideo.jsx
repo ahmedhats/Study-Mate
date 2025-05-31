@@ -30,6 +30,7 @@ const { Text, Paragraph } = Typography;
 // Local Video Component
 export const LocalVideo = ({ userName, showControls = true }) => {
   const localVideoRef = useRef(null);
+  const videoContainerRef = useRef(null);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,41 +38,87 @@ export const LocalVideo = ({ userName, showControls = true }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Create video container if it doesn't exist
+    if (!videoContainerRef.current) {
+      const container = document.createElement("div");
+      container.id = "local-video-main-container";
+      container.style.width = "100%";
+      container.style.height = "100%";
+      container.style.position = "relative";
+      document.body.appendChild(container);
+      videoContainerRef.current = container;
+    }
+
     // Start camera directly
     startCamera();
 
     return () => {
       // Clean up on unmount
       stopCamera();
+      if (videoContainerRef.current) {
+        videoContainerRef.current.remove();
+      }
     };
   }, []);
+
+  // Attach stream to video element whenever stream changes
+  useEffect(() => {
+    if (localVideoRef.current && stream) {
+      localVideoRef.current.srcObject = stream;
+      localVideoRef.current.muted = true;
+      localVideoRef.current.autoplay = true;
+      localVideoRef.current.playsInline = true;
+      localVideoRef.current.style.display =
+        videoEnabled && !error ? "block" : "none";
+      localVideoRef.current.onloadedmetadata = () => {
+        localVideoRef.current.play().catch((err) => {
+          if (!error)
+            setError("Could not start video playback: " + err.message);
+        });
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream, videoEnabled]);
 
   const startCamera = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log("Requesting camera access directly...");
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasVideoDevice = devices.some(
+        (device) => device.kind === "videoinput"
+      );
+      if (!hasVideoDevice) {
+        throw new Error(
+          "No camera device found. Please connect a camera and try again."
+        );
+      }
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user",
+        },
         audio: true,
       });
-
-      console.log("Camera access granted, setting up video element");
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = mediaStream;
-        setStream(mediaStream);
-        console.log("Video stream successfully attached to element");
-      } else {
-        console.error("No video element reference available");
-        setError("Video element not found");
-      }
-
+      setStream(mediaStream);
       setVideoEnabled(true);
       setAudioEnabled(true);
     } catch (err) {
-      console.error("Error accessing camera:", err);
-      setError(`Camera access error: ${err.message || "Unknown error"}`);
+      let errorMessage = "Camera access error: ";
+      if (err.name === "NotAllowedError") {
+        errorMessage +=
+          "Camera access was denied. Please allow camera access in your browser settings.";
+      } else if (err.name === "NotFoundError") {
+        errorMessage +=
+          "No camera found. Please connect a camera and try again.";
+      } else if (err.name === "NotReadableError") {
+        errorMessage +=
+          "Camera is in use by another application. Please close other applications using the camera.";
+      } else {
+        errorMessage += err.message || "Unknown error";
+      }
+      setError(errorMessage);
       setVideoEnabled(false);
     } finally {
       setIsLoading(false);
@@ -313,6 +360,7 @@ export const LocalVideo = ({ userName, showControls = true }) => {
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            background: "#eaeaea",
             display: videoEnabled && !error ? "block" : "none",
           }}
         />

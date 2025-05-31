@@ -16,7 +16,7 @@ const agoraConfig = {
   // Temporary token for development - for channel 'study-mate'
   // Generate a fresh token from Agora Console for the defaultChannelName above
   temporaryToken:
-    "007eJxTYBC46i/sEd625rKxy7FpfO8MEt2yWh2DJt55bT2lO8h8D58Cg5mlUZKpgbFFcop5iolFqrmFiYGpoXGScUpqqoWlsZnRrqtqGQ2BjAwMyenMjAwQCOJzMRSXlKZU6uYmlqQyMAAAYNYfQw==",
+    "007eJxTYGBZUezVdvjY79dlPs+sah/Ye8uu0om5sz3g+7mX+3M7UicrMKSZGZgYGZqYWJpaGpokmiVbplkkJhuYpKWamiRZmJilhE4xyWgIZGR43fuKiZEBAkF8LobiktKUSt3cxJJUBgYAt7QkCA==",
 
   // IMPORTANT: The token above is for the channel "study-mate" only
   // If you need to join a different channel, you'll need to generate a new token

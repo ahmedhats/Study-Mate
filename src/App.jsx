@@ -13,18 +13,21 @@ import ActivityTracker from "./components/common/ActivityTracker";
 import NotificationHub from "./components/common/NotificationHub";
 import "./styles/App.css";
 import DirectVideoTest from "./components/features/studySessions/DirectVideoTest";
+import WellnessHub from "./pages/WellnessHub";
+import QuotesPage from "./pages/QuotesPage";
 
 // Lazy load all components
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Timer = React.lazy(() => import("./pages/Timer"));
 const Stats = React.lazy(() => import("./pages/Stats"));
-const StudyGroup = React.lazy(() => import("./pages/StudyGroup"));
 const Team = React.lazy(() => import("./pages/Team"));
 const Tasks = React.lazy(() => import("./pages/Tasks"));
 const CalendarPage = React.lazy(() => import("./pages/CalendarPage"));
 const Search = React.lazy(() => import("./pages/Search"));
 const Inbox = React.lazy(() => import("./pages/Inbox"));
-const MessagingPage = React.lazy(() => import("./components/features/messaging/MessagingPage"));
+const MessagingPage = React.lazy(() =>
+  import("./components/features/messaging/MessagingPage")
+);
 const MineDesign = React.lazy(() => import("./pages/mine-design/MineDesign"));
 const Purweb = React.lazy(() => import("./pages/purweb/Purweb"));
 const Welcome = React.lazy(() => import("./pages/Welcome"));
@@ -276,16 +279,6 @@ const App = () => {
               }
             />
             <Route
-              path="/study-group"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <StudyGroup />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/team"
               element={
                 <ProtectedRoute>
@@ -380,6 +373,30 @@ const App = () => {
               }
             />
 
+            {/* Add Wellness Hub route */}
+            <Route
+              path="/wellness-hub"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <WellnessHub />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Add Quotes route */}
+            <Route
+              path="/quotes"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <QuotesPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* Add Community Detail route */}
             <Route
               path="/community/:communityId"
@@ -437,7 +454,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            
+
             {/* Add Users route for creating new conversations */}
             <Route
               path="/users"

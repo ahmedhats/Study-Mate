@@ -8,6 +8,7 @@ import {
   StarFilled,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import "./CommunityCard.css";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -25,13 +26,21 @@ const CommunityCard = ({ community, onJoin, onFavorite }) => {
   return (
     <Card
       hoverable
-      style={{ marginBottom: 16 }}
+      className="community-card"
+      style={{
+        marginBottom: 16,
+        minHeight: 370,
+        boxSizing: "border-box",
+        padding: 0,
+        width: 300,
+        maxWidth: "100%",
+      }}
       cover={
         image ? (
           <img
             alt={name}
             src={image}
-            style={{ height: 160, objectFit: "cover" }}
+            style={{ height: 160, objectFit: "cover", width: "100%" }}
           />
         ) : null
       }
@@ -67,14 +76,45 @@ const CommunityCard = ({ community, onJoin, onFavorite }) => {
       ]}
       onClick={handleViewDetails}
     >
-      <Title level={4}>{name}</Title>
-      <Paragraph ellipsis={{ rows: 2 }}>{description}</Paragraph>
-      <div style={{ marginTop: 12 }}>
-        {tags.map((tag) => (
-          <Tag key={tag} color="blue" style={{ marginBottom: 8 }}>
-            {tag}
-          </Tag>
-        ))}
+      <div className="community-card-content">
+        <Title
+          level={4}
+          ellipsis={{ rows: 1 }}
+          style={{
+            marginBottom: 8,
+            maxWidth: 260,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {name}
+        </Title>
+        <Paragraph
+          className="community-card-description"
+          style={{ marginBottom: 8, minHeight: 48, maxWidth: 260 }}
+        >
+          {description}
+        </Paragraph>
+        <div
+          style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}
+        >
+          {tags.map((tag) => (
+            <Tag
+              key={tag}
+              color="blue"
+              style={{
+                marginBottom: 8,
+                maxWidth: 120,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {tag}
+            </Tag>
+          ))}
+        </div>
       </div>
     </Card>
   );

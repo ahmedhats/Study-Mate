@@ -209,8 +209,8 @@ export const getStudySessionDetails = async (sessionId) => {
       const sessionType = isIndividual
         ? "individual"
         : isGroup
-        ? "group"
-        : "general";
+          ? "group"
+          : "general";
 
       // Extract any timestamp information for session creation time
       let creationTime = new Date();
@@ -228,13 +228,13 @@ export const getStudySessionDetails = async (sessionId) => {
           title: isIndividual
             ? "Personal Study Session"
             : isGroup
-            ? "Group Study Session"
-            : "Study Session",
+              ? "Group Study Session"
+              : "Study Session",
           description: isIndividual
             ? "A personal study space for focused learning."
             : isGroup
-            ? "A collaborative space for group study."
-            : "A flexible space for study and collaboration.",
+              ? "A collaborative space for group study."
+              : "A flexible space for study and collaboration.",
           subject: "Study Session",
           createdAt: creationTime.toISOString(),
           sessionType,
@@ -308,6 +308,26 @@ export const deleteStudySession = async (sessionId) => {
     console.log("Mock deleting study session due to API error:", error.message);
     return {
       data: { message: "Session deleted successfully in demo mode" },
+      status: 200,
+    };
+  }
+};
+
+// Get study sessions for a specific community
+export const getCommunityStudySessions = async (communityId) => {
+  try {
+    const response = await axios.get(`${API_URL}/study-sessions?communityId=${communityId}`, {
+      headers: getAuthHeader(),
+    });
+    return response;
+  } catch (error) {
+    console.log(
+      "Using mock data for community study sessions due to API error:",
+      error.message
+    );
+    // Return mock data structure that matches expected API response
+    return {
+      data: mockSessions.filter(s => s.communityId === communityId),
       status: 200,
     };
   }

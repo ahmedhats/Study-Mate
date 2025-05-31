@@ -1,4 +1,9 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import {
   List,
   Avatar,
@@ -33,26 +38,38 @@ import {
   TeamOutlined,
   TrophyOutlined,
 } from "@ant-design/icons";
-import { sendFriendRequest, getRecommendedFriends } from "../../../../services/api/socialService";
-import { formatLastActive, isUserOnline } from "../../../../utils/dateFormatter";
+import {
+  sendFriendRequest,
+  getRecommendedFriends,
+} from "../../../../services/api/socialService";
+import {
+  formatLastActive,
+  isUserOnline,
+} from "../../../../utils/dateFormatter";
 import "./RecommendedFriends.css";
 import DirectMessageButton from "../../../../components/features/messaging/DirectMessageButton";
 
 const { Text, Title, Paragraph } = Typography;
 const { Option } = Select;
 
+const getProfileImageUrl = (profileImage) => {
+  if (!profileImage) return undefined;
+  if (profileImage.startsWith("http")) return profileImage;
+  return process.env.REACT_APP_BACKEND_URL + profileImage;
+};
+
 const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterCriteria, setFilterCriteria] = useState('all');
-  const [searchText, setSearchText] = useState('');
+  const [filterCriteria, setFilterCriteria] = useState("all");
+  const [searchText, setSearchText] = useState("");
   const [displayedRecommendations, setDisplayedRecommendations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // Expose fetchRecommendations through ref
   useImperativeHandle(ref, () => ({
-    fetchRecommendations
+    fetchRecommendations,
   }));
 
   useEffect(() => {
@@ -68,14 +85,16 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
 
     // Apply percentage filter
     switch (filterCriteria) {
-      case 'high':
-        filtered = filtered.filter(rec => rec.matchPercentage >= 75);
+      case "high":
+        filtered = filtered.filter((rec) => rec.matchPercentage >= 75);
         break;
-      case 'medium':
-        filtered = filtered.filter(rec => rec.matchPercentage >= 50 && rec.matchPercentage < 75);
+      case "medium":
+        filtered = filtered.filter(
+          (rec) => rec.matchPercentage >= 50 && rec.matchPercentage < 75
+        );
         break;
-      case 'low':
-        filtered = filtered.filter(rec => rec.matchPercentage < 50);
+      case "low":
+        filtered = filtered.filter((rec) => rec.matchPercentage < 50);
         break;
       default:
         break;
@@ -84,17 +103,20 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
     // Apply search filter
     if (searchText) {
       const searchLower = searchText.toLowerCase();
-      filtered = filtered.filter(rec => 
-        rec.user.name.toLowerCase().includes(searchLower) ||
-        rec.user.major?.toLowerCase().includes(searchLower) ||
-        rec.user.interests?.some(interest => interest.toLowerCase().includes(searchLower)) ||
-        rec.user.education?.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (rec) =>
+          rec.user.name.toLowerCase().includes(searchLower) ||
+          rec.user.major?.toLowerCase().includes(searchLower) ||
+          rec.user.interests?.some((interest) =>
+            interest.toLowerCase().includes(searchLower)
+          ) ||
+          rec.user.education?.toLowerCase().includes(searchLower)
       );
     }
 
     // Sort by match percentage
     filtered.sort((a, b) => b.matchPercentage - a.matchPercentage);
-    
+
     setDisplayedRecommendations(filtered);
   };
 
@@ -102,20 +124,20 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
     try {
       setLoading(true);
       const response = await getRecommendedFriends();
-      
+
       if (response.matches) {
-        console.log('Received recommendations:', response.matches);
+        console.log("Received recommendations:", response.matches);
         if (response.matchingMethod) {
-          console.log('Matching method used:', response.matchingMethod);
+          console.log("Matching method used:", response.matchingMethod);
         }
         setRecommendations(response.matches);
       } else if (response.error) {
-        console.error('Error from API:', response.error);
+        console.error("Error from API:", response.error);
         message.error(response.error);
         setRecommendations([]);
       } else {
-        console.error('Invalid response format:', response);
-        message.error('Invalid response format from server');
+        console.error("Invalid response format:", response);
+        message.error("Invalid response format from server");
         setRecommendations([]);
       }
     } catch (error) {
@@ -129,9 +151,9 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
 
   const handleSendRequest = async (userId) => {
     try {
-      console.log('Sending friend request to user:', userId);
+      console.log("Sending friend request to user:", userId);
       const response = await sendFriendRequest(userId);
-      
+
       if (response.error) {
         throw new Error(response.error);
       }
@@ -146,7 +168,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
       setRecommendations((prev) =>
         prev.filter((rec) => rec.user._id !== userId)
       );
-      
+
       // Also update displayed recommendations
       setDisplayedRecommendations((prev) =>
         prev.filter((rec) => rec.user._id !== userId)
@@ -160,7 +182,9 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
       console.error("Error sending friend request:", error);
       notification.error({
         message: "Failed to Send Request",
-        description: error.message || "Unable to send friend request. Please try again later.",
+        description:
+          error.message ||
+          "Unable to send friend request. Please try again later.",
         placement: "topRight",
       });
     }
@@ -222,13 +246,19 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
     return (
       <div className="detailed-profile">
         <div className="profile-header">
-          <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
+          <Avatar
+            size={100}
+            src={getProfileImageUrl(user.profileImage) || undefined}
+            style={{ background: "#1890ff", marginBottom: 16 }}
+          >
+            {!user.profileImage && user.name ? user.name[0].toUpperCase() : "U"}
+          </Avatar>
           <Title level={2}>{user.name}</Title>
           <Text type="secondary">{user.email}</Text>
-          <div style={{ marginTop: '12px' }}>
-            <DirectMessageButton 
-              userId={user._id} 
-              type="primary" 
+          <div style={{ marginTop: "12px" }}>
+            <DirectMessageButton
+              userId={user._id}
+              type="primary"
               showText={true}
             />
           </div>
@@ -255,7 +285,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
         </Title>
         <div className="tag-container">
           {user.interests?.map((interest, index) => (
-            <Tag key={index} color="green" style={{ margin: '4px' }}>
+            <Tag key={index} color="green" style={{ margin: "4px" }}>
               {interest}
             </Tag>
           ))}
@@ -268,7 +298,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
         </Title>
         <div className="tag-container">
           {user.hobbies?.map((hobby, index) => (
-            <Tag key={index} color="orange" style={{ margin: '4px' }}>
+            <Tag key={index} color="orange" style={{ margin: "4px" }}>
               {hobby}
             </Tag>
           ))}
@@ -326,7 +356,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
       : false;
 
     return (
-      <Card 
+      <Card
         className="recommended-friend-card"
         hoverable
         onClick={() => showUserProfile(user)}
@@ -340,7 +370,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
             }}
           >
             Add Friend
-          </Button>
+          </Button>,
         ]}
       >
         <Card.Meta
@@ -350,15 +380,31 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
               status={isOnline ? "success" : "default"}
               offset={[-4, 36]}
             >
-              <Avatar size={64}>{user.name ? user.name[0] : "U"}</Avatar>
+              <Avatar
+                size={64}
+                src={getProfileImageUrl(user.profileImage) || undefined}
+                style={{ background: "#1890ff", marginRight: 12 }}
+              >
+                {!user.profileImage && user.name
+                  ? user.name[0].toUpperCase()
+                  : "U"}
+              </Avatar>
             </Badge>
           }
           title={
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ fontSize: "16px", fontWeight: "bold" }}>
                 {user.name}
                 {isOnline && (
-                  <Tag color="success" style={{ marginLeft: 8 }}>Online</Tag>
+                  <Tag color="success" style={{ marginLeft: 8 }}>
+                    Online
+                  </Tag>
                 )}
               </div>
               <Progress
@@ -367,35 +413,44 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
                 width={40}
                 format={(percent) => `${percent}%`}
                 status={
-                  matchPercentage >= 75 ? "success" :
-                  matchPercentage >= 50 ? "normal" :
-                  "exception"
+                  matchPercentage >= 75
+                    ? "success"
+                    : matchPercentage >= 50
+                    ? "normal"
+                    : "exception"
                 }
               />
             </div>
           }
           description={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <div>
-                <div style={{ color: '#666' }}>{user.email}</div>
+                <div style={{ color: "#666" }}>{user.email}</div>
                 {!isOnline && user.statistics?.lastActive && (
-                  <div style={{ color: '#888', fontSize: '12px' }}>
+                  <div style={{ color: "#888", fontSize: "12px" }}>
                     <ClockCircleOutlined style={{ marginRight: 5 }} />
                     Last active: {formatLastActive(user.statistics.lastActive)}
                   </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "4px",
+                }}
+              >
                 {user.major && (
                   <Tag color="blue">
                     <BookOutlined /> {formatMajor(user.major)}
                   </Tag>
                 )}
                 {user.education && (
-                  <Tag color="cyan">
-                    {formatEducation(user.education)}
-                  </Tag>
+                  <Tag color="cyan">{formatEducation(user.education)}</Tag>
                 )}
                 {user.studyPreference && (
                   <Tag color="purple">
@@ -406,10 +461,16 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
 
               {user.interests && user.interests.length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 500, marginBottom: '4px' }}>Interests:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  <div style={{ fontWeight: 500, marginBottom: "4px" }}>
+                    Interests:
+                  </div>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
+                  >
                     {user.interests.map((interest, index) => (
-                      <Tag key={index} color="green">{interest}</Tag>
+                      <Tag key={index} color="green">
+                        {interest}
+                      </Tag>
                     ))}
                   </div>
                 </div>
@@ -417,10 +478,16 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
 
               {user.hobbies && user.hobbies.length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 500, marginBottom: '4px' }}>Hobbies:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  <div style={{ fontWeight: 500, marginBottom: "4px" }}>
+                    Hobbies:
+                  </div>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
+                  >
                     {user.hobbies.map((hobby, index) => (
-                      <Tag key={index} color="orange">{hobby}</Tag>
+                      <Tag key={index} color="orange">
+                        {hobby}
+                      </Tag>
                     ))}
                   </div>
                 </div>
@@ -446,7 +513,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
         description={
           <div>
             <p>No recommendations available at the moment</p>
-            <p style={{ fontSize: '14px', color: '#666' }}>
+            <p style={{ fontSize: "14px", color: "#666" }}>
               This could be because:
               <ul>
                 <li>You haven't completed your profile</li>
@@ -495,7 +562,14 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
       ) : displayedRecommendations.length > 0 ? (
         <Row gutter={[16, 16]}>
           {displayedRecommendations.map((recommendation) => (
-            <Col xs={24} sm={24} md={12} lg={8} xl={8} key={recommendation.user._id}>
+            <Col
+              xs={24}
+              sm={24}
+              md={12}
+              lg={8}
+              xl={8}
+              key={recommendation.user._id}
+            >
               {renderUserCard(
                 recommendation.user,
                 recommendation.matchPercentage,
@@ -522,10 +596,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
         onCancel={() => setProfileModalVisible(false)}
         width={800}
         footer={[
-          <Button 
-            key="close" 
-            onClick={() => setProfileModalVisible(false)}
-          >
+          <Button key="close" onClick={() => setProfileModalVisible(false)}>
             Close
           </Button>,
           <Button
@@ -538,7 +609,7 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
             }}
           >
             Add Friend
-          </Button>
+          </Button>,
         ]}
       >
         {renderDetailedProfile(selectedUser)}
@@ -547,4 +618,4 @@ const RecommendedFriends = forwardRef(({ onFriendRequestSent }, ref) => {
   );
 });
 
-export default RecommendedFriends; 
+export default RecommendedFriends;

@@ -35,7 +35,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const response = await getUserProfile();
-      
+
       // Extract user data from the response, handling different response formats
       let userDataFromApi;
       if (response && response.success && response.data) {
@@ -48,7 +48,7 @@ const Dashboard = () => {
         // API returns the user data directly
         userDataFromApi = response;
       }
-      
+
       setUserData(userDataFromApi);
     } catch (error) {
       console.error("Failed to fetch user data:", error);
@@ -120,7 +120,7 @@ const Dashboard = () => {
       icon: <TeamOutlined style={{ fontSize: "24px", color: "#722ed1" }} />,
       description: "3 New Matches",
       buttonText: "Join Session",
-      onClick: () => navigate("/study-group"),
+      onClick: () => navigate("/study-sessions"),
     },
   ];
 

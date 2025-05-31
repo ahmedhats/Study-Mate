@@ -14,7 +14,8 @@ exports.matchUser = async (req, res) => {
       major: user.major || "",
       education: user.education || "",
       studyPreference: user.studyPreference || "",
-      studyGoals: user.studyGoals || ""
+      studyGoals: user.studyGoals || "",
+      profileImage: user.profileImage || ""
     });
 
     const inputPayload = {

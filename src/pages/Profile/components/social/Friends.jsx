@@ -1,4 +1,9 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import {
   List,
   Avatar,
@@ -50,6 +55,12 @@ const { TabPane } = Tabs;
 const { Search } = Input;
 const { Title, Text, Paragraph } = Typography;
 
+const getProfileImageUrl = (profileImage) => {
+  if (!profileImage) return undefined;
+  if (profileImage.startsWith("http")) return profileImage;
+  return process.env.REACT_APP_BACKEND_URL + profileImage;
+};
+
 const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const [activeKey, setActiveKey] = useState("myFriends");
   const [friends, setFriends] = useState([]);
@@ -65,7 +76,7 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
 
   // Expose fetchFriendsData through ref
   useImperativeHandle(ref, () => ({
-    fetchFriendsData
+    fetchFriendsData,
   }));
 
   // Load friends and requests on component mount
@@ -101,7 +112,8 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
       console.error("Error fetching friends data:", error);
       notification.error({
         message: "Failed to Load Friends Data",
-        description: error.message || "There was a problem loading your friends data.",
+        description:
+          error.message || "There was a problem loading your friends data.",
         placement: "topRight",
       });
     } finally {
@@ -198,7 +210,9 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const handleAcceptRequest = async (userId) => {
     try {
       // Find the friend request for this user
-      const request = pendingRequests.find(request => request.sender._id === userId);
+      const request = pendingRequests.find(
+        (request) => request.sender._id === userId
+      );
       if (!request) {
         throw new Error("Friend request not found");
       }
@@ -222,7 +236,8 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
       console.error("Error accepting friend request:", error);
       notification.error({
         message: "Failed to Accept Request",
-        description: error.message || "There was a problem accepting the friend request.",
+        description:
+          error.message || "There was a problem accepting the friend request.",
         placement: "topRight",
       });
     }
@@ -231,7 +246,9 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
   const handleRejectRequest = async (userId) => {
     try {
       // Find the friend request for this user
-      const request = pendingRequests.find(request => request.sender._id === userId);
+      const request = pendingRequests.find(
+        (request) => request.sender._id === userId
+      );
       if (!request) {
         throw new Error("Friend request not found");
       }
@@ -255,7 +272,8 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
       console.error("Error rejecting friend request:", error);
       notification.error({
         message: "Failed to Reject Request",
-        description: error.message || "There was a problem rejecting the friend request.",
+        description:
+          error.message || "There was a problem rejecting the friend request.",
         placement: "topRight",
       });
     }
@@ -314,13 +332,19 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
     return (
       <div className="detailed-profile">
         <div className="profile-header">
-          <Avatar size={100}>{user.name ? user.name[0] : "U"}</Avatar>
+          <Avatar
+            size={100}
+            src={getProfileImageUrl(user.profileImage) || undefined}
+            style={{ background: "#1890ff", marginBottom: 16 }}
+          >
+            {!user.profileImage && user.name ? user.name[0].toUpperCase() : "U"}
+          </Avatar>
           <Title level={2}>{user.name}</Title>
           <Text type="secondary">{user.email}</Text>
-          <div style={{ marginTop: '12px' }}>
-            <DirectMessageButton 
-              userId={user._id} 
-              type="primary" 
+          <div style={{ marginTop: "12px" }}>
+            <DirectMessageButton
+              userId={user._id}
+              type="primary"
               showText={true}
             />
           </div>
@@ -347,7 +371,7 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
         </Title>
         <div className="tag-container">
           {user.interests?.map((interest, index) => (
-            <Tag key={index} color="green" style={{ margin: '4px' }}>
+            <Tag key={index} color="green" style={{ margin: "4px" }}>
               {interest}
             </Tag>
           ))}
@@ -360,7 +384,7 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
         </Title>
         <div className="tag-container">
           {user.hobbies?.map((hobby, index) => (
-            <Tag key={index} color="orange" style={{ margin: '4px' }}>
+            <Tag key={index} color="orange" style={{ margin: "4px" }}>
               {hobby}
             </Tag>
           ))}
@@ -461,23 +485,8 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
       : false;
 
     return (
-      <List.Item 
-        actions={[
-          <DirectMessageButton 
-            userId={user._id} 
-            showText={true}
-          />,
-          <Button
-            icon={<UserDeleteOutlined />}
-            danger
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveFriend(user._id);
-            }}
-          >
-            Remove
-          </Button>,
-        ]}
+      <List.Item
+        actions={actions}
         className="friend-list-item"
         onClick={() => showUserProfile(user)}
       >
@@ -488,39 +497,56 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
               status={isOnline ? "success" : "default"}
               offset={[-4, 36]}
             >
-              <Avatar size={64}>{user.name ? user.name[0] : "U"}</Avatar>
+              <Avatar
+                size={64}
+                src={getProfileImageUrl(user.profileImage) || undefined}
+                style={{ background: "#1890ff", marginRight: 12 }}
+              >
+                {!user.profileImage && user.name
+                  ? user.name[0].toUpperCase()
+                  : "U"}
+              </Avatar>
             </Badge>
           }
           title={
-            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+            <div style={{ fontSize: "16px", fontWeight: "bold" }}>
               {user.name}
               {isOnline && (
-                <Tag color="success" style={{ marginLeft: 8 }}>Online</Tag>
+                <Tag color="success" style={{ marginLeft: 8 }}>
+                  Online
+                </Tag>
               )}
             </div>
           }
           description={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <div>
-                <div style={{ color: '#666' }}>{user.email}</div>
+                <div style={{ color: "#666" }}>{user.email}</div>
                 {!isOnline && user.statistics?.lastActive && (
-                  <div style={{ color: '#888', fontSize: '12px' }}>
+                  <div style={{ color: "#888", fontSize: "12px" }}>
                     <ClockCircleOutlined style={{ marginRight: 5 }} />
                     Last active: {formatLastActive(user.statistics.lastActive)}
                   </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "4px",
+                }}
+              >
                 {user.major && (
                   <Tag color="blue">
                     <BookOutlined /> {formatMajor(user.major)}
                   </Tag>
                 )}
                 {user.education && (
-                  <Tag color="cyan">
-                    {formatEducation(user.education)}
-                  </Tag>
+                  <Tag color="cyan">{formatEducation(user.education)}</Tag>
                 )}
               </div>
             </div>
@@ -555,9 +581,7 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
           ) : friends.length > 0 ? (
             <List
               dataSource={friends}
-              renderItem={(user) =>
-                renderUserItem(user, [])
-              }
+              renderItem={(user) => renderUserItem(user, [])}
             />
           ) : (
             <Empty
@@ -587,13 +611,19 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
                   <Button
                     type="primary"
                     icon={<CheckOutlined />}
-                    onClick={() => handleAcceptRequest(request.sender._id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAcceptRequest(request.sender._id);
+                    }}
                   >
                     Accept
                   </Button>,
                   <Button
                     icon={<CloseOutlined />}
-                    onClick={() => handleRejectRequest(request.sender._id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRejectRequest(request.sender._id);
+                    }}
                   >
                     Reject
                   </Button>,
@@ -623,7 +653,10 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
                 renderUserItem(user, [
                   <Button
                     icon={<CloseOutlined />}
-                    onClick={() => handleCancelRequest(user._id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelRequest(user._id);
+                    }}
                   >
                     Cancel
                   </Button>,
@@ -673,7 +706,10 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
                 <Button
                   type="primary"
                   icon={<UserAddOutlined />}
-                  onClick={() => handleAddFriend(user._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddFriend(user._id);
+                  }}
                 >
                   Add
                 </Button>,
@@ -694,12 +730,9 @@ const Friends = forwardRef(({ onFriendRequestCanceled }, ref) => {
         onCancel={() => setProfileModalVisible(false)}
         width={800}
         footer={[
-          <Button 
-            key="close" 
-            onClick={() => setProfileModalVisible(false)}
-          >
+          <Button key="close" onClick={() => setProfileModalVisible(false)}>
             Close
-          </Button>
+          </Button>,
         ]}
       >
         {renderDetailedProfile(selectedUser)}

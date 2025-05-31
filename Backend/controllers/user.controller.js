@@ -152,7 +152,7 @@ module.exports.deleteUser = async (req, res, next) => {
 module.exports.searchUsers = async (req, res) => {
   try {
     const { query, page = 1, limit = 10, education, major } = req.query;
-    
+
     // Get the current user ID from the authenticated request
     const currentUserId = req.userId || req.user?._id;
 
@@ -167,7 +167,7 @@ module.exports.searchUsers = async (req, res) => {
     const filter = {
       _id: { $ne: currentUserId.toString() }, // Not the current user
     };
-    
+
     // Add search query if provided
     if (query && query.trim() !== "") {
       const searchPattern = new RegExp(query.trim(), "i");
@@ -177,30 +177,30 @@ module.exports.searchUsers = async (req, res) => {
         { username: searchPattern },
       ];
     }
-    
+
     // Add education filter if provided
     if (education) {
       filter.education = education;
     }
-    
+
     // Add major filter if provided
     if (major) {
       filter.major = major;
     }
 
     console.log("Search filter:", filter);
-    
+
     // Calculate pagination values
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const pageSize = parseInt(limit);
 
     // Find users matching the search criteria
     const users = await User.find(filter)
-      .select("_id name email major education studyPreference interests hobbies statistics.lastActive")
+      .select("_id name email major education studyPreference interests hobbies statistics.lastActive profileImage")
       .skip(skip)
       .limit(pageSize)
       .sort({ name: 1 });
-    
+
     // Get total count for pagination
     const totalCount = await User.countDocuments(filter);
 
@@ -385,7 +385,7 @@ module.exports.getUserFriends = async (req, res) => {
     // Find the user and populate their friends list with all relevant fields
     const user = await User.findById(userId).populate({
       path: "friends",
-      select: "_id name email major interests hobbies education studyPreference statistics.lastActive"
+      select: "_id name email major interests hobbies education studyPreference statistics.lastActive profileImage"
     });
 
     if (!user) {
@@ -488,7 +488,7 @@ module.exports.getPendingRequests = async (req, res) => {
     const pendingRequests = await FriendRequest.find({
       receiver: userId,
       status: 'pending'
-    }).populate('sender', '_id name email major interests hobbies education studyPreference statistics.lastActive');
+    }).populate('sender', '_id name email major interests hobbies education studyPreference statistics.lastActive profileImage');
 
     return res.status(200).json({
       success: true,
@@ -516,7 +516,7 @@ module.exports.getSentRequests = async (req, res) => {
     const sentRequests = await FriendRequest.find({
       sender: userId,
       status: 'pending'
-    }).populate('receiver', '_id name email major interests hobbies education studyPreference statistics.lastActive');
+    }).populate('receiver', '_id name email major interests hobbies education studyPreference statistics.lastActive profileImage');
 
     return res.status(200).json({
       success: true,
@@ -558,11 +558,11 @@ module.exports.acceptFriendRequest = async (req, res) => {
 
     // Add each user to the other's friends list
     await Promise.all([
-      User.findByIdAndUpdate(userId, { 
-        $addToSet: { friends: friendRequest.sender._id } 
+      User.findByIdAndUpdate(userId, {
+        $addToSet: { friends: friendRequest.sender._id }
       }),
-      User.findByIdAndUpdate(friendRequest.sender._id, { 
-        $addToSet: { friends: userId } 
+      User.findByIdAndUpdate(friendRequest.sender._id, {
+        $addToSet: { friends: userId }
       })
     ]);
 
@@ -712,11 +712,11 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
     // 2. Their friends
     // 3. Users who have sent them friend requests
     const otherUsers = await User.find({
-      _id: { 
+      _id: {
         $ne: userId, // not the current user
         $nin: [...currentUser.friends, ...usersSentRequests] // not friends and not users who sent requests
       }
-    }).select('name email major interests hobbies education studyPreference');
+    }).select('name email major interests hobbies education studyPreference profileImage');
 
     try {
       // Prepare input for the Python script
@@ -729,7 +729,8 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
           interests: user.interests || [],
           hobbies: user.hobbies || [],
           education: user.education || "",
-          studyPreference: user.studyPreference || ""
+          studyPreference: user.studyPreference || "",
+          profileImage: user.profileImage || ""
         })),
         target_user: {
           _id: currentUser._id.toString(),
@@ -739,7 +740,8 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
           interests: currentUser.interests || [],
           hobbies: currentUser.hobbies || [],
           education: currentUser.education || "",
-          studyPreference: currentUser.studyPreference || ""
+          studyPreference: currentUser.studyPreference || "",
+          profileImage: currentUser.profileImage || ""
         },
         top_n: 10
       };
@@ -749,7 +751,7 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
       const results = await executePythonScript('user_matcher.py', pythonInput);
       console.log('Successfully used Python matching algorithm');
       console.log('Python script results:', results);
-      
+
       return res.status(httpStatus.OK).json({
         ...results,
         matchingMethod: 'python'
@@ -757,7 +759,7 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
     } catch (pythonError) {
       console.error('Python script execution failed:', pythonError);
       console.log('Falling back to JavaScript matching algorithm...');
-      
+
       // Fallback to basic matching logic if Python script fails
       const matches = otherUsers.map(user => {
         // Calculate a basic match percentage based on common attributes
@@ -784,7 +786,7 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
 
         // Interests overlap (25%)
         if (user.interests?.length && currentUser.interests?.length) {
-          const commonInterests = user.interests.filter(interest => 
+          const commonInterests = user.interests.filter(interest =>
             currentUser.interests.includes(interest)
           );
           const interestScore = (commonInterests.length / Math.max(user.interests.length, currentUser.interests.length)) * 25;
@@ -794,7 +796,7 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
 
         // Hobbies overlap (15%)
         if (user.hobbies?.length && currentUser.hobbies?.length) {
-          const commonHobbies = user.hobbies.filter(hobby => 
+          const commonHobbies = user.hobbies.filter(hobby =>
             currentUser.hobbies.includes(hobby)
           );
           const hobbyScore = (commonHobbies.length / Math.max(user.hobbies.length, currentUser.hobbies.length)) * 15;
@@ -814,7 +816,8 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
             interests: user.interests,
             hobbies: user.hobbies,
             education: user.education,
-            studyPreference: user.studyPreference
+            studyPreference: user.studyPreference,
+            profileImage: user.profileImage
           },
           matchPercentage
         };
@@ -823,7 +826,7 @@ module.exports.getRecommendedFriends = async (req, res, next) => {
       // Sort by match percentage in descending order
       matches.sort((a, b) => b.matchPercentage - a.matchPercentage);
 
-      return res.status(httpStatus.OK).json({ 
+      return res.status(httpStatus.OK).json({
         matches: matches.slice(0, 10),
         matchingMethod: 'javascript'
       });

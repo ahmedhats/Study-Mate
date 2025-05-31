@@ -31,6 +31,8 @@ import {
   CalendarOutlined,
   MessageOutlined,
   VideoCameraOutlined,
+  HeartOutlined,
+  BulbOutlined,
 } from "@ant-design/icons";
 import "../../styles/sidebar.css";
 
@@ -112,29 +114,33 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         if (response.success) {
           // Calculate unread count by checking each conversation
           let count = 0;
-          
+
           // Check if response.conversations exists (matches backend response format)
           const conversations = response.conversations || [];
-          
-          conversations.forEach(conversation => {
+
+          conversations.forEach((conversation) => {
             if (userData && conversation.lastMessage) {
               // Find current user's participant record
               const userParticipant = conversation.participants.find(
-                p => p.userId._id === userData._id
+                (p) => p.userId._id === userData._id
               );
-              
+
               if (userParticipant) {
                 // Compare timestamps to determine if message is unread
-                const lastMessageTime = new Date(conversation.lastMessage.timestamp).getTime();
-                const lastReadTime = new Date(userParticipant.lastReadTimestamp).getTime();
-                
+                const lastMessageTime = new Date(
+                  conversation.lastMessage.timestamp
+                ).getTime();
+                const lastReadTime = new Date(
+                  userParticipant.lastReadTimestamp
+                ).getTime();
+
                 if (lastMessageTime > lastReadTime) {
                   count += 1;
                 }
               }
             }
           });
-          
+
           setUnreadMessageCount(count);
         }
       } catch (error) {
@@ -145,10 +151,10 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     // Only fetch if we have user data
     if (userData) {
       fetchUnreadMessages();
-      
+
       // Set up polling for unread message updates
       const interval = setInterval(fetchUnreadMessages, 60000); // Every minute
-      
+
       return () => clearInterval(interval);
     }
   }, [userData]);
@@ -181,42 +187,27 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const sidebarMenuItems = [
     getItem("Main Menu", "grp1", null, null, null, "group"), // Group title
     getItem("Dashboard", "dashboard", <HomeOutlined />, "/dashboard"),
-    getItem("Communities", "search", <SearchOutlined />, "/search"), // Communities page
-    getItem("Inbox", "inbox", <InboxOutlined />, "/inbox"), // Example path
+    getItem("Communities", "search", <SearchOutlined />, "/search"),
     getItem(
-      "Messages", 
-      "messages", 
+      "Messages",
+      "messages",
       <Badge count={unreadMessageCount} offset={[10, 0]} size="small">
         <MessageOutlined />
-      </Badge>, 
+      </Badge>,
       "/messages"
-    ), // Messaging feature
-    getItem("My Task", "my-task", <CheckSquareOutlined />, "/tasks"), // Example path
-    getItem("Calendar", "calendar", <CalendarOutlined />, "/calendar"), // New Calendar item
+    ),
+    getItem("My Task", "my-task", <CheckSquareOutlined />, "/tasks"),
+    getItem("Calendar", "calendar", <CalendarOutlined />, "/calendar"),
+    getItem("Wellness Hub", "wellness-hub", <HeartOutlined />, "/wellness-hub"),
+    getItem("Daily Wisdom", "quotes", <BulbOutlined />, "/quotes"),
     getItem(
       "Study Sessions",
       "study-sessions",
       <VideoCameraOutlined />,
       "/study-sessions"
-    ), // Study Sessions
-    getItem("Social", "social", <TeamOutlined />, "/profile/social"), // Updated label and path
-
-    getItem("Teamspaces", "grp2", null, null, null, "group"), // Group title
-    getItem("Mine Design", "mine-design", <AppstoreOutlined />, null, [
-      // Submenu key
-      getItem("Intro Design", "intro-design", null, "/mine-design/intro"),
-      getItem("About Company", "about-company", null, "/mine-design/about"),
-      // ... other sub-items
-    ]),
-    getItem("Purweb Design", "purweb-design", <AppstoreOutlined />, null, [
-      // Submenu key
-      getItem("Intro Design", "purweb-intro", null, "/purweb/intro"),
-      // ... other sub-items
-    ]),
-
-    { type: "divider", key: "divider-1" }, // Divider
-
-    // Logout item with handleLogout function
+    ),
+    getItem("Social", "social", <TeamOutlined />, "/profile/social"),
+    { type: "divider", key: "divider-1" },
     getItem(
       "Logout",
       "logout",
@@ -258,10 +249,22 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     const currentPath = location.pathname;
     let selectedKey = "dashboard"; // Default key
 
+    // Highlight the profile header if on any /profile route
+    if (currentPath.startsWith("/profile")) {
+      return ["profile-header"];
+    }
+
+    // Highlight Study Sessions for both /study-sessions and /study-session/:id
+    if (
+      currentPath.startsWith("/study-sessions") ||
+      currentPath.startsWith("/study-session")
+    ) {
+      return ["study-sessions"];
+    }
+
     const findKey = (items) => {
       for (const item of items) {
         if (item.path && currentPath.startsWith(item.path)) {
-          // More specific paths should match first if nested
           if (
             !findMenuItem(item.children || [], selectedKey)?.path?.startsWith(
               item.path
@@ -324,23 +327,37 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     <div className="sidebar-content-wrapper">
       <div className="sidebar-scrollable-content">
         <div
-          className="sidebar-header"
+          className={`sidebar-header${
+            getSelectedKeys()[0] === "profile-header"
+              ? " sidebar-header-selected"
+              : ""
+          }`}
           onClick={handleProfileClick}
           style={{ cursor: "pointer" }}
         >
           <Space align="center" className="sidebar-header-space">
-            <Avatar size={40} className="sidebar-avatar">
-              {getUserInitials()}
+            <Avatar
+              size={40}
+              className="sidebar-avatar"
+              src={userData?.profileImage || undefined}
+              style={{ background: "#1890ff" }}
+            >
+              {!userData?.profileImage && getUserInitials()}
             </Avatar>
             {!collapsed && (
-              <div className="user-info">
-                <Text strong className="user-name">
-                  {userData?.name || "Loading..."}
-                </Text>
-                <Text type="secondary" className="user-email">
-                  {userData?.email || ""}
-                </Text>
-              </div>
+              <Text
+                strong
+                className="user-name"
+                style={{
+                  fontSize: 15,
+                  marginLeft: 8,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {userData?.name || "Loading..."}
+              </Text>
             )}
           </Space>
         </div>

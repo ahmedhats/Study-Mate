@@ -24,6 +24,7 @@ import {
   HeartOutlined,
   StarOutlined,
   TeamOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import EditProfileModal from "./components/EditProfileModal";
 import { getUserProfile } from "../../services/api/userService";
@@ -34,6 +35,7 @@ import {
   formatStudyPreference,
   formatArrayData,
 } from "../../utils/formatters";
+import axios from "axios";
 
 const MyProfile = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -41,6 +43,7 @@ const MyProfile = () => {
   const [userData, setUserData] = useState(null);
   const [localUserData, setLocalUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     // First, get the data from localStorage for immediate display
@@ -134,6 +137,61 @@ const MyProfile = () => {
     };
     return colors[type] || "default";
   };
+
+  // Handle avatar click to trigger file input
+  const fileInputRef = React.useRef();
+  const handleAvatarClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const backendUrl = "http://localhost:5000";
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      // Get JWT token from localStorage
+      const userData = JSON.parse(localStorage.getItem("userData"));
+      const token = userData?.token;
+      const response = await axios.post(
+        `${backendUrl}/api/user/upload-avatar`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          withCredentials: true,
+        }
+      );
+      if (response.data && response.data.imageUrl) {
+        const newImageUrl =
+          backendUrl + response.data.imageUrl + "?t=" + Date.now();
+        // Update only the profileImage in the user object
+        const updatedUserData = {
+          ...userData,
+          user: {
+            ...userData.user,
+            profileImage: newImageUrl,
+          },
+        };
+        setUserData(updatedUserData.user);
+        setLocalUserData(updatedUserData.user);
+        localStorage.setItem("userData", JSON.stringify(updatedUserData));
+        message.success("Profile image updated!");
+      }
+    } catch (err) {
+      message.error("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const userDataFromStorage = JSON.parse(localStorage.getItem("userData"));
+  const profileImage = userDataFromStorage?.user?.profileImage;
 
   if (loading && !localUserData) {
     return (
@@ -272,28 +330,72 @@ const MyProfile = () => {
   ];
 
   return (
-    <div className="my-profile-container">
-      <div className="profile-header">
-        <div className="profile-avatar">
-          <Avatar size={100}>
-            {displayUserData.name
-              ? displayUserData.name.charAt(0).toUpperCase()
-              : "U"}
-          </Avatar>
+    <div className="my-profile">
+      <div className="profile-info">
+        <div
+          className="profile-header"
+          style={{ alignItems: "center", gap: 24 }}
+        >
+          <div style={{ position: "relative", display: "inline-block" }}>
+            <Avatar
+              size={88}
+              className="profile-avatar"
+              src={profileImage || undefined}
+              style={{ cursor: "pointer", background: "#1890ff" }}
+              onClick={handleAvatarClick}
+            >
+              {!profileImage && displayUserData.name
+                ? displayUserData.name[0].toUpperCase()
+                : "U"}
+            </Avatar>
+            <EditOutlined
+              style={{
+                position: "absolute",
+                bottom: 8,
+                right: 8,
+                fontSize: 16,
+                color: "#fff",
+                background: "#1890ff",
+                borderRadius: "50%",
+                padding: 2,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                cursor: "pointer",
+                border: "2px solid #fff",
+                zIndex: 2,
+              }}
+              onClick={handleAvatarClick}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+              disabled={uploading}
+            />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <h2 style={{ margin: 0, fontWeight: 600, fontSize: 24 }}>
+              {displayUserData.name}
+            </h2>
+            <p style={{ color: "#8c8c8c", margin: "4px 0 0 0", fontSize: 16 }}>
+              {displayUserData.email}
+            </p>
+          </div>
         </div>
-        <div className="profile-info">
-          <h2>{displayUserData.name}</h2>
-          <p>{displayUserData.email}</p>
-          <p>
-            <Tag color="blue">{formatMajor(displayUserData.major)}</Tag>
-            <Tag color="green">
-              {formatEducation(displayUserData.education)}
-            </Tag>
-          </p>
-          <Button type="primary" onClick={() => setIsEditModalVisible(true)}>
-            Edit Profile
-          </Button>
-        </div>
+        <p>
+          <Tag color="blue">{formatMajor(displayUserData.major)}</Tag>
+          <Tag color="green">{formatEducation(displayUserData.education)}</Tag>
+        </p>
+        <Button type="primary" onClick={() => setIsEditModalVisible(true)}>
+          Edit Profile
+        </Button>
       </div>
 
       <Tabs

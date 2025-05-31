@@ -10,7 +10,8 @@
   left: 0;
   top: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important; /* Smoother animation */
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
+  /* Smoother animation */
 }
 
 /* Wrapper to manage flex layout */
@@ -25,8 +26,10 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin; /* For Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: thin;
+  /* For Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
 }
 
 /* Custom scrollbar for webkit browsers */
@@ -111,7 +114,7 @@
 
 /* General Menu Item Styling (Includes Submenu Titles) */
 .sidebar-menu .ant-menu-item,
-.sidebar-menu .ant-menu-submenu > .ant-menu-submenu-title {
+.sidebar-menu .ant-menu-submenu>.ant-menu-submenu-title {
   margin: 4px 8px !important;
   /* Margin around items */
   padding-left: 16px !important;
@@ -147,10 +150,7 @@
 }
 
 /* Item Hover State */
-.sidebar-menu
-  .ant-menu-item:not(.ant-menu-item-selected):not(
-    .ant-menu-item-disabled
-  ):hover,
+.sidebar-menu .ant-menu-item:not(.ant-menu-item-selected):not(.ant-menu-item-disabled):hover,
 .sidebar-menu .ant-menu-submenu-title:not(.ant-menu-item-disabled):hover {
   background-color: #f9fafb;
   /* Very light grey background on hover */
@@ -186,10 +186,7 @@
 
 /* --- Menu Styles when Collapsed --- */
 .ant-layout-sider-collapsed .sidebar-menu .ant-menu-item,
-.ant-layout-sider-collapsed
-  .sidebar-menu
-  .ant-menu-submenu
-  > .ant-menu-submenu-title {
+.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu>.ant-menu-submenu-title {
   padding: 0 calc(50% - 18px / 2) !important;
   /* Center icon (adjust icon size if needed) */
 }
@@ -430,4 +427,10 @@
 /* Ensure the drawer animates smoothly */
 .ant-drawer-content-wrapper {
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.sidebar-header-selected {
+  background: #e6f7ff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.08);
 }
