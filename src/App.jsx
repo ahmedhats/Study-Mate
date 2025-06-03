@@ -41,8 +41,8 @@ const CommunityDetailPage = React.lazy(() =>
   import("./pages/CommunityDetailPage")
 );
 const StudySession = React.lazy(() => import("./pages/StudySession"));
-const AgoraStudyRoom = React.lazy(() =>
-  import("./components/features/studySessions/AgoraStudyRoom")
+const StudyRoom = React.lazy(() =>
+  import("./components/features/studySessions/StudyRoom")
 );
 const Users = React.lazy(() => import("./pages/Users"));
 
@@ -427,7 +427,7 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <AgoraStudyRoom />
+                    <StudyRoom />
                   </MainLayout>
                 </ProtectedRoute>
               }

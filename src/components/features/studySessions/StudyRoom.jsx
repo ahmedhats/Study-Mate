@@ -26,12 +26,11 @@ import {
   ExclamationCircleOutlined,
   RedoOutlined,
 } from "@ant-design/icons";
-import AgoraVideoRoom from "./AgoraVideo";
+import JitsiVideoRoom from "./JitsiVideoRoom";
 import {
   getStudySessionDetails,
   leaveStudySession,
 } from "../../../services/api/studySessionService";
-import agoraService from "../../../services/agora/agoraService";
 
 const { Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -39,7 +38,7 @@ const { TextArea } = Input;
 const { TabPane } = Tabs;
 const { confirm } = Modal;
 
-const AgoraStudyRoom = () => {
+const StudyRoom = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
 
@@ -78,9 +77,6 @@ const AgoraStudyRoom = () => {
 
     // Cleanup function
     return () => {
-      // Clean up Agora
-      agoraService.leave().catch(console.error);
-
       // Stop timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -407,8 +403,7 @@ const AgoraStudyRoom = () => {
         await downloadNotes();
       }
 
-      // Leave Agora channel
-      await agoraService.leave();
+      // Note: No need to leave video channel as it's handled by the iframe
 
       // Notify backend (if not in offline mode)
       if (!sessionDetails?.isOfflineMode && sessionId) {
@@ -448,23 +443,6 @@ const AgoraStudyRoom = () => {
   // Handle video error
   const handleVideoError = (error) => {
     console.error("Video error:", error);
-
-    // Check if this is a mock mode activation error
-    if (error.message === "MOCK_MODE_ACTIVATED") {
-      // This is from our custom fallback in AgoraVideo
-      const mockSessionId = sessionStorage.getItem("mockSessionId");
-
-      notification.info({
-        message: "Using Local Video Mode",
-        description:
-          "Authentication with Agora servers failed. Using local-only video mode instead.",
-        duration: 5,
-      });
-
-      // We can still keep video available since we're using a mock mode
-      setVideoAvailable(true);
-      return;
-    }
 
     setVideoAvailable(false);
     notification.error({
@@ -573,8 +551,8 @@ const AgoraStudyRoom = () => {
         <TabPane tab="Video" key="video">
           <Card>
             {videoAvailable ? (
-              <AgoraVideoRoom
-                sessionId="study-mate"
+              <JitsiVideoRoom
+                sessionId={sessionId}
                 userName={displayName || userName}
                 onError={handleVideoError}
               />
@@ -764,6 +742,9 @@ const AgoraStudyRoom = () => {
                   : "Group"}
               </p>
               <p>
+                <strong>Video Platform:</strong> Jitsi Meet
+              </p>
+              <p>
                 <strong>Mode:</strong>{" "}
                 {sessionDetails?.isOfflineMode
                   ? "Offline (Limited Connectivity)"
@@ -873,4 +854,4 @@ const AgoraStudyRoom = () => {
   );
 };
 
-export default AgoraStudyRoom;
+export default StudyRoom;

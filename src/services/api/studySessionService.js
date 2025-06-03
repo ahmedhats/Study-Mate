@@ -99,21 +99,77 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// Get stored mock sessions from localStorage
+const getStoredMockSessions = () => {
+  try {
+    const stored = localStorage.getItem("mockSessions");
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error("Error loading stored mock sessions:", error);
+    return [];
+  }
+};
+
+// Store mock sessions to localStorage
+const storeMockSessions = (sessions) => {
+  try {
+    localStorage.setItem("mockSessions", JSON.stringify(sessions));
+  } catch (error) {
+    console.error("Error storing mock sessions:", error);
+  }
+};
+
+// Store individual session data by ID
+const storeSessionData = (sessionId, sessionData) => {
+  try {
+    localStorage.setItem(`session_${sessionId}`, JSON.stringify(sessionData));
+    console.log(`Stored session data for ID: ${sessionId}`);
+    return true;
+  } catch (error) {
+    console.error("Error storing session data:", error);
+    return false;
+  }
+};
+
+// Get individual session data by ID
+const getSessionData = (sessionId) => {
+  try {
+    const stored = localStorage.getItem(`session_${sessionId}`);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.error("Error loading session data:", error);
+    return null;
+  }
+};
+
 // Get all study sessions
 export const getAllStudySessions = async () => {
   try {
     const response = await axios.get(`${API_URL}/study-sessions`, {
       headers: getAuthHeader(),
     });
-    return response;
+
+    // Combine API sessions with stored mock sessions
+    const storedMockSessions = getStoredMockSessions();
+    const allSessions = [...(response.data || []), ...storedMockSessions];
+
+    return {
+      data: allSessions,
+      status: 200,
+    };
   } catch (error) {
     console.log(
       "Using mock data for study sessions due to API error:",
       error.message
     );
+
+    // Get stored mock sessions and combine with default mock data
+    const storedMockSessions = getStoredMockSessions();
+    const allMockSessions = [...mockSessions, ...storedMockSessions];
+
     // Return mock data structure that matches expected API response
     return {
-      data: mockSessions,
+      data: allMockSessions,
       status: 200,
     };
   }
@@ -133,21 +189,53 @@ export const createStudySession = async (sessionData) => {
   } catch (error) {
     console.log("Mock creating study session due to API error:", error.message);
 
-    // Create a valid session ID that will work with Agora
+    // Create a valid session ID for Jitsi compatibility
     const timestamp = Date.now();
-    const sessionType = sessionData.type || "group";
+    const sessionType = sessionData.type || sessionData.sessionMode || "group";
     const mockSessionId = `mock-${sessionType}-${timestamp}`;
 
-    // Return mock created session
+    // Get user information for proper attribution
+    let currentUserName = "You";
+    try {
+      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+      currentUserName =
+        userData.name || userData.username || userData.user?.name || "You";
+    } catch (e) {
+      console.log("Could not get user name from localStorage");
+    }
+
+    // Create the complete mock session with all user data preserved
     const mockSession = {
       ...sessionData,
       _id: mockSessionId,
       createdAt: new Date().toISOString(),
-      participants: [{ _id: "current-user", name: "You" }],
-      status: "active",
+      participants: [{ _id: "current-user", name: currentUserName }],
+      status: sessionData.startImmediately
+        ? "active"
+        : sessionData.status || "active",
+      // Ensure all user-provided data is preserved
+      title: sessionData.title,
+      description: sessionData.description,
+      subject: sessionData.subject,
+      type: sessionType,
+      maxParticipants: sessionData.maxParticipants || 10,
     };
 
-    console.log(`Created mock session with ID: ${mockSessionId}`);
+    // Store the session data in multiple ways for reliability
+    try {
+      // Primary storage - individual session data
+      storeSessionData(mockSessionId, mockSession);
+
+      // Secondary storage - add to the list of mock sessions for visibility
+      const storedMockSessions = getStoredMockSessions();
+      storedMockSessions.push(mockSession);
+      storeMockSessions(storedMockSessions);
+      console.log("Added session to mock sessions list");
+    } catch (storageError) {
+      console.warn("Could not store mock session data:", storageError);
+    }
+
+    console.log(`Created mock session with ID: ${mockSessionId}`, mockSession);
 
     return {
       data: mockSession,
@@ -199,48 +287,107 @@ export const leaveStudySession = async (sessionId) => {
 // Get study session details
 export const getStudySessionDetails = async (sessionId) => {
   try {
-    // If this is a mock session ID, immediately return mock data
+    // If this is a mock session ID, prioritize stored session data
     if (sessionId && sessionId.startsWith("mock-")) {
-      console.log("Using mock session for session ID:", sessionId);
+      console.log("Retrieving mock session for session ID:", sessionId);
 
-      // Determine session type from ID format
-      const isIndividual = sessionId.includes("individual");
-      const isGroup = sessionId.includes("group");
-      const sessionType = isIndividual
-        ? "individual"
-        : isGroup
-          ? "group"
-          : "general";
+      // Method 1: Try to get the complete session data from individual storage
+      let sessionData = getSessionData(sessionId);
+      if (sessionData) {
+        console.log(
+          "Retrieved complete session data from individual storage:",
+          sessionData
+        );
+        return {
+          data: sessionData,
+          status: 200,
+        };
+      }
 
-      // Extract any timestamp information for session creation time
+      // Method 2: Check in the stored mock sessions list
+      try {
+        const storedMockSessions = getStoredMockSessions();
+        const foundSession = storedMockSessions.find(
+          (s) => s._id === sessionId
+        );
+        if (foundSession) {
+          console.log("Found session in mock sessions list:", foundSession);
+          // Store it individually for faster future access
+          storeSessionData(sessionId, foundSession);
+          return {
+            data: foundSession,
+            status: 200,
+          };
+        }
+      } catch (listError) {
+        console.warn("Could not check mock sessions list:", listError);
+      }
+
+      // Method 3: Check if this was a legacy stored session
+      try {
+        const legacySessionData = localStorage.getItem(`session_${sessionId}`);
+        if (legacySessionData) {
+          sessionData = JSON.parse(legacySessionData);
+          console.log("Retrieved legacy session data:", sessionData);
+          return {
+            data: sessionData,
+            status: 200,
+          };
+        }
+      } catch (legacyError) {
+        console.warn("Could not retrieve legacy session data:", legacyError);
+      }
+
+      // Method 4: Last resort - create a minimal session with available info
+      console.warn(
+        `No stored data found for session ${sessionId}, creating minimal session`
+      );
+
+      // Extract session type and timestamp from ID if possible
+      const sessionTypesMatch = sessionId.match(/mock-([^-]+)-(\d+)/);
+      let sessionType = "group";
       let creationTime = new Date();
-      const timestampMatch = sessionId.match(/\d+/);
-      if (timestampMatch && timestampMatch[0]) {
-        const timestamp = parseInt(timestampMatch[0]);
+
+      if (sessionTypesMatch) {
+        sessionType = sessionTypesMatch[1];
+        const timestamp = parseInt(sessionTypesMatch[2]);
         if (!isNaN(timestamp)) {
           creationTime = new Date(timestamp);
         }
       }
 
+      const isIndividual = sessionType === "individual";
+
+      // Get user information
+      let currentUserName = "You";
+      try {
+        const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+        currentUserName =
+          userData.name || userData.username || userData.user?.name || "You";
+      } catch (e) {
+        console.log("Could not get user name from localStorage");
+      }
+
+      // Create minimal session data but with better defaults
+      const minimalSession = {
+        _id: sessionId,
+        title: isIndividual ? "Personal Study Session" : "Group Study Session",
+        description: isIndividual
+          ? "A personal study space for focused learning."
+          : "A collaborative study session.",
+        subject: "General Study",
+        createdAt: creationTime.toISOString(),
+        type: sessionType,
+        status: "active",
+        participants: [{ _id: "current-user", name: currentUserName }],
+        maxParticipants: isIndividual ? 1 : 10,
+      };
+
+      // Store this minimal session for future use
+      storeSessionData(sessionId, minimalSession);
+
       return {
-        data: {
-          _id: sessionId,
-          title: isIndividual
-            ? "Personal Study Session"
-            : isGroup
-              ? "Group Study Session"
-              : "Study Session",
-          description: isIndividual
-            ? "A personal study space for focused learning."
-            : isGroup
-              ? "A collaborative space for group study."
-              : "A flexible space for study and collaboration.",
-          subject: "Study Session",
-          createdAt: creationTime.toISOString(),
-          sessionType,
-          status: "active",
-          participants: [{ _id: "current-user", name: "You" }],
-        },
+        data: minimalSession,
         status: 200,
       };
     }
@@ -252,20 +399,23 @@ export const getStudySessionDetails = async (sessionId) => {
 
     // Ensure we have valid session data
     if (response && response.data) {
-      console.log("Successfully retrieved session data:", response.data);
+      console.log(
+        "Successfully retrieved session data from API:",
+        response.data
+      );
       return response;
     } else {
       throw new Error("Invalid response format from server");
     }
   } catch (error) {
     console.error(
-      "Error fetching session details from API:",
+      "Error fetching session details:",
       error.message,
       error.response?.status
     );
 
     // Throw the error to let the component handle it
-    // This will trigger the offline/fallback mode in StudySessionRoom
+    // This will trigger the offline/fallback mode in StudyRoom
     throw error;
   }
 };
@@ -306,6 +456,29 @@ export const deleteStudySession = async (sessionId) => {
     return response;
   } catch (error) {
     console.log("Mock deleting study session due to API error:", error.message);
+
+    // Remove from stored mock sessions if it's a mock session
+    if (sessionId && sessionId.startsWith("mock-")) {
+      try {
+        // Remove from individual session storage
+        localStorage.removeItem(`session_${sessionId}`);
+        console.log("Removed individual session data");
+
+        // Remove from stored mock sessions list
+        const storedMockSessions = getStoredMockSessions();
+        const filteredSessions = storedMockSessions.filter(
+          (s) => s._id !== sessionId
+        );
+        storeMockSessions(filteredSessions);
+        console.log("Removed session from mock sessions list");
+      } catch (storageError) {
+        console.warn(
+          "Could not remove mock session from storage:",
+          storageError
+        );
+      }
+    }
+
     return {
       data: { message: "Session deleted successfully in demo mode" },
       status: 200,
@@ -316,9 +489,12 @@ export const deleteStudySession = async (sessionId) => {
 // Get study sessions for a specific community
 export const getCommunityStudySessions = async (communityId) => {
   try {
-    const response = await axios.get(`${API_URL}/study-sessions?communityId=${communityId}`, {
-      headers: getAuthHeader(),
-    });
+    const response = await axios.get(
+      `${API_URL}/study-sessions?communityId=${communityId}`,
+      {
+        headers: getAuthHeader(),
+      }
+    );
     return response;
   } catch (error) {
     console.log(
@@ -327,7 +503,7 @@ export const getCommunityStudySessions = async (communityId) => {
     );
     // Return mock data structure that matches expected API response
     return {
-      data: mockSessions.filter(s => s.communityId === communityId),
+      data: mockSessions.filter((s) => s.communityId === communityId),
       status: 200,
     };
   }

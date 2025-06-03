@@ -13,8 +13,8 @@ const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const multer = require('multer');
-const path = require('path');
+const multer = require("multer");
+const path = require("path");
 require("dotenv").config();
 
 // Import models
@@ -32,9 +32,9 @@ const io = new Server(server, {
     origin: ["http://localhost:3000", "http://localhost:3002"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   },
-  transports: ['websocket', 'polling']
+  transports: ["websocket", "polling"],
 });
 
 // Import routes
@@ -53,19 +53,25 @@ const messageRouter = require("./routers/message.routes");
 const conversationRouter = require("./routers/conversation.routes");
 
 // Security middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3002",
+      "http://localhost:5173",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
     preflightContinue: false,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
   })
 );
 
@@ -81,17 +87,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Serve uploaded files statically
-app.use('/uploads', express.static('uploads'));
+app.use("/uploads", express.static("uploads"));
 
 // Multer storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/avatars/'); // Make sure this folder exists
+    cb(null, "uploads/avatars/"); // Make sure this folder exists
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
     cb(null, Date.now() + ext);
-  }
+  },
 });
 const upload = multer({ storage });
 
@@ -100,23 +106,28 @@ const authMiddleware = require("./middlewares/auth.middleware");
 const User = require("./models/user.model");
 
 // The upload endpoint (now with auth and DB update)
-app.post('/api/user/upload-avatar', authMiddleware.auth, upload.single('avatar'), async (req, res, next) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const imageUrl = `/uploads/avatars/${req.file.filename}`;
-    // Update the user's profileImage in the DB
-    const userId = req.userId || req.user._id;
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { profileImage: imageUrl },
-      { new: true }
-    ).select('-password -resetPasswordToken -resetPasswordExpires');
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ imageUrl, user });
-  } catch (err) {
-    next(err);
+app.post(
+  "/api/user/upload-avatar",
+  authMiddleware.auth,
+  upload.single("avatar"),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const imageUrl = `/uploads/avatars/${req.file.filename}`;
+      // Update the user's profileImage in the DB
+      const userId = req.userId || req.user._id;
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { profileImage: imageUrl },
+        { new: true }
+      ).select("-password -resetPasswordToken -resetPasswordExpires");
+      if (!user) return res.status(404).json({ error: "User not found" });
+      res.json({ imageUrl, user });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 // API routes
 app.use("/api/auth", auth);
@@ -170,7 +181,7 @@ io.use((socket, next) => {
 });
 
 // Import and use the main socket handler
-const initializeSocketHandler = require('./socket.handler');
+const initializeSocketHandler = require("./socket.handler");
 initializeSocketHandler(io);
 
 // Socket.IO connection handling
@@ -261,9 +272,11 @@ io.on("connection", (socket) => {
 
           // Also send a welcome message
           socket.emit("receive-message", {
-            text: `Welcome to the study session! There ${participants.length === 1 ? "is" : "are"
-              } ${participants.length} other ${participants.length === 1 ? "participant" : "participants"
-              } online.`,
+            text: `Welcome to the study session! There ${
+              participants.length === 1 ? "is" : "are"
+            } ${participants.length} other ${
+              participants.length === 1 ? "participant" : "participants"
+            } online.`,
             sender: "System",
             senderId: "system",
             timestamp: new Date().toISOString(),
@@ -308,7 +321,8 @@ io.on("connection", (socket) => {
   socket.on("send-message", (message) => {
     if (socket.roomId) {
       console.log(
-        `Message in room ${socket.roomId} from ${socket.userName
+        `Message in room ${socket.roomId} from ${
+          socket.userName
         }: ${message.text.substring(0, 20)}...`
       );
 
@@ -396,5 +410,8 @@ mongoose
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log("CORS allowed origin:", process.env.CORS_ORIGIN || "http://localhost:3000");
+  console.log(
+    "CORS allowed origin:",
+    process.env.CORS_ORIGIN || "http://localhost:3000"
+  );
 });
